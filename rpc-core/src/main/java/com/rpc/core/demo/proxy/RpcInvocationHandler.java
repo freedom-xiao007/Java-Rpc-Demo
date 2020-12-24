@@ -38,21 +38,18 @@ import java.net.URISyntaxException;
 public class RpcInvocationHandler implements InvocationHandler, MethodInterceptor {
 
     private final Class<?> serviceClass;
-    private final String url;
     private final String group;
     private final String version;
 
-    <T> RpcInvocationHandler(Class<T> serviceClass, String url) {
+    <T> RpcInvocationHandler(Class<T> serviceClass) {
         this.serviceClass = serviceClass;
-        this.url = url;
         this.group = "default";
         this.version = "default";
         System.out.println("Client Service Class Reflect: " + group + ":" + version);
     }
 
-    public <T> RpcInvocationHandler(Class<T> serviceClass, String url, String group, String version) {
+    public <T> RpcInvocationHandler(Class<T> serviceClass, String group, String version) {
         this.serviceClass = serviceClass;
-        this.url = url;
         this.group = group;
         this.version = version;
         System.out.println("Client Service Class Reflect: " + group + ":" + version);
@@ -60,12 +57,12 @@ public class RpcInvocationHandler implements InvocationHandler, MethodIntercepto
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) {
-        return process(serviceClass, method, args, url);
+        return process(serviceClass, method, args);
     }
 
     @Override
     public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) {
-        return process(serviceClass, method, args, url);
+        return process(serviceClass, method, args);
     }
 
     /**
@@ -74,10 +71,9 @@ public class RpcInvocationHandler implements InvocationHandler, MethodIntercepto
      * @param service service name
      * @param method service method
      * @param params method params
-     * @param url server host
      * @return object
      */
-    private Object process(Class<?> service, Method method, Object[] params, String url) {
+    private Object process(Class<?> service, Method method, Object[] params) {
         log.info("Client proxy instance method invoke");
 
         // 自定义了Rpc请求的结构 RpcRequest,放入接口名称、方法名、参数
@@ -88,6 +84,8 @@ public class RpcInvocationHandler implements InvocationHandler, MethodIntercepto
         rpcRequest.setArgv(params);
         rpcRequest.setGroup(group);
         rpcRequest.setVersion(version);
+
+        String url = "";
 
         // 客户端使用的 netty，发送请求到服务端，拿到结果（自定义结构：rpcfxResponse)
         log.info("Client send request to Server");

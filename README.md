@@ -15,7 +15,7 @@
 - [ ] 3）尝试自定义二进制序列化
 - [ ] 4）尝试压测改进后的RPC并分析优化，有问题欢迎群里讨论
 - [ ] 5）尝试将fastjson改成xstream
-- [ ] 6）尝试使用字节码生成方式代替服务端反射
+- [x] 6）尝试使用字节码生成方式代替服务端反射
 
 - [x] 1、（选做）rpcfx1.1: 给自定义RPC实现简单的分组(group)和版本(version)。
 - [ ] 2、（选做）rpcfx2.0: 给自定义RPC实现：
@@ -42,3 +42,6 @@
 ## 实现过程中的思考与实现记录
 
 - [RPC Demo 1.0 实现](https://github.com/lw1243925457/JAVA-000/blob/main/homework/rpc/rpc-demo/README.md)
+
+## 参考链接
+- [Curator 事件监听](https://www.cnblogs.com/crazymakercircle/p/10228385.html)

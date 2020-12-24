@@ -19,6 +19,7 @@ package com.rpc.core.demo.proxy;
 
 import com.rpc.core.demo.annotation.ProviderService;
 import com.rpc.core.demo.api.RpcRequest;
+import com.rpc.core.demo.discovery.DiscoveryServer;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -27,6 +28,9 @@ import java.net.URL;
 import java.util.*;
 
 /**
+ * 提供RPC Provider 的初始化
+ * 初始化实例放入 Map 中，方便后续的获取
+ *
  * @author lw1243925457
  */
 @Slf4j
@@ -37,8 +41,11 @@ public class ProviderServiceManagement {
      */
     private static Map<String, Map<String, Map<String, Object>>> proxyMap = new HashMap<>();
 
-    public static void init(String packageName) throws IOException, ClassNotFoundException, IllegalAccessException, InstantiationException {
+    public static void init(String packageName, int port) throws Exception {
         System.out.println("\n-------- Loader Rpc Provider class start ----------------------\n");
+
+        DiscoveryServer serviceRegister = new DiscoveryServer();
+
         Class[] classes = getClasses(packageName);
         for (Class c: classes) {
             ProviderService annotation = (ProviderService) c.getAnnotation(ProviderService.class);
@@ -53,6 +60,9 @@ public class ProviderServiceManagement {
             versionMap.put(annotation.service(), c.newInstance());
             groupMap.put(version, versionMap);
             proxyMap.put(group, groupMap);
+
+            serviceRegister.registerService(annotation.service(), group, version, port);
+
             log.info("load provider class: " + annotation.service() + ":" + group + ":" + version + " :: " + c.getName());
         }
         System.out.println("\n-------- Loader Rpc Provider class end ----------------------\n");

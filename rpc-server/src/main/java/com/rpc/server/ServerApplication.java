@@ -20,17 +20,16 @@ package com.rpc.server;
 import com.rpc.core.demo.netty.server.RpcNettyServer;
 import com.rpc.core.demo.proxy.ProviderServiceManagement;
 
-import java.io.IOException;
-
 /**
  * @author lw1243925457
  */
 public class ServerApplication {
 
-    public static void main(String[] args) throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException {
-        ProviderServiceManagement.init("com.rpc.server.demo.service.impl");
+    public static void main(String[] args) throws Exception {
+        final int port = 8080;
+        ProviderServiceManagement.init("com.rpc.server.demo.service.impl", port);
 
-        final RpcNettyServer rpcNettyServer = new RpcNettyServer();
+        final RpcNettyServer rpcNettyServer = new RpcNettyServer(port);
 
         try {
             rpcNettyServer.run();

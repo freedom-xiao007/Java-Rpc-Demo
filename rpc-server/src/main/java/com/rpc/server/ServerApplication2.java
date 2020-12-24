@@ -15,20 +15,29 @@
  * limitations under the License.
  */
 
-package com.rpc.core.demo.proxy;
+package com.rpc.server;
+
+import com.rpc.core.demo.netty.server.RpcNettyServer;
+import com.rpc.core.demo.proxy.ProviderServiceManagement;
 
 /**
  * @author lw1243925457
  */
-public interface RpcClient {
+public class ServerApplication2 {
 
-    /**
-     * create proxy
-     * @param serviceClass service class
-     * @param <T> T
-     * @return proxy class
-     */
-    <T> T create(final Class<T> serviceClass);
+    public static void main(String[] args) throws Exception {
+        int port = 8081;
 
-    <T> T create(final Class<T> serviceClass, String group, String version);
+        ProviderServiceManagement.init("com.rpc.server.demo.service.impl2", port);
+
+        final RpcNettyServer rpcNettyServer = new RpcNettyServer(port);
+
+        try {
+            rpcNettyServer.run();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            rpcNettyServer.destroy();
+        }
+    }
 }

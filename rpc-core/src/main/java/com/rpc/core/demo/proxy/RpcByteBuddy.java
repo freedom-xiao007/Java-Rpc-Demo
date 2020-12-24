@@ -27,26 +27,26 @@ import net.bytebuddy.implementation.InvocationHandlerAdapter;
 public class RpcByteBuddy extends RpcProxy implements RpcClient {
 
     @Override
-    public <T> T create(Class<T> serviceClass, String url) {
+    public <T> T create(Class<T> serviceClass) {
         if (!isExit(serviceClass.getName())) {
-            add(serviceClass.getName(), newProxy(serviceClass, url));
+            add(serviceClass.getName(), newProxy(serviceClass));
         }
         return (T) getProxy(serviceClass.getName());
     }
 
     @Override
-    public <T> T create(Class<T> serviceClass, String url, String group, String version) {
+    public <T> T create(Class<T> serviceClass, String group, String version) {
         if (!isExit(serviceClass.getName())) {
-            add(serviceClass.getName(), newProxy(serviceClass, url, group, version));
+            add(serviceClass.getName(), newProxy(serviceClass, group, version));
         }
         return (T) getProxy(serviceClass.getName());
     }
 
     @SneakyThrows
-    private <T> T newProxy(Class<T> serviceClass, String url, String group, String version) {
+    private <T> T newProxy(Class<T> serviceClass, String group, String version) {
         return (T) new ByteBuddy().subclass(Object.class)
                 .implement(serviceClass)
-                .intercept(InvocationHandlerAdapter.of(new RpcInvocationHandler(serviceClass, url, group, version)))
+                .intercept(InvocationHandlerAdapter.of(new RpcInvocationHandler(serviceClass, group, version)))
                 .make()
                 .load(RpcByteBuddy.class.getClassLoader())
                 .getLoaded()
@@ -55,10 +55,10 @@ public class RpcByteBuddy extends RpcProxy implements RpcClient {
     }
 
     @SneakyThrows
-    private <T> T newProxy(Class<T> serviceClass, String url) {
+    private <T> T newProxy(Class<T> serviceClass) {
         return (T) new ByteBuddy().subclass(Object.class)
                 .implement(serviceClass)
-                .intercept(InvocationHandlerAdapter.of(new RpcInvocationHandler(serviceClass, url)))
+                .intercept(InvocationHandlerAdapter.of(new RpcInvocationHandler(serviceClass)))
                 .make()
                 .load(RpcByteBuddy.class.getClassLoader())
                 .getLoaded()

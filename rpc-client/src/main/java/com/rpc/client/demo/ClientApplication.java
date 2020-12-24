@@ -41,7 +41,7 @@ public class ClientApplication {
 //        System.out.println("----------------- v1 ---------------------");
 //        UserService userService = client.create(UserService.class, "http://localhost:8080/");
         System.out.println("----------------- v2 ---------------------");
-        UserService userService = client.create(UserService.class, "http://localhost:8080/", "group2", "v2");
+        UserService userService = client.create(UserService.class, "group2", "v2");
         User user = userService.findById(1);
         if (user == null) {
             log.info("Clint service invoke Error");

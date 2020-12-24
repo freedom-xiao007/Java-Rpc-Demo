@@ -15,20 +15,39 @@
  * limitations under the License.
  */
 
-package com.rpc.core.demo.proxy;
+package com.rpc.core.demo.api;
+
+import com.fasterxml.jackson.annotation.JsonRootName;
+import lombok.Builder;
+import lombok.Data;
+
+import java.net.InetAddress;
 
 /**
  * @author lw1243925457
  */
-public interface RpcClient {
+@Data
+@Builder
+@JsonRootName("details")
+public class ServiceProviderDesc {
 
-    /**
-     * create proxy
-     * @param serviceClass service class
-     * @param <T> T
-     * @return proxy class
-     */
-    <T> T create(final Class<T> serviceClass);
+    String serviceClass;
 
-    <T> T create(final Class<T> serviceClass, String group, String version);
+    String host;
+
+    Integer port;
+
+    String group;
+
+    String version;
+
+    private ServiceProviderDesc() {}
+
+    public ServiceProviderDesc(String serviceClass, String host, Integer port, String group, String version) {
+        this.serviceClass = serviceClass;
+        this.host = host;
+        this.port = port;
+        this.group = group;
+        this.version = version;
+    }
 }

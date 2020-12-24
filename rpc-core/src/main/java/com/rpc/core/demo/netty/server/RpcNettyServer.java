@@ -19,6 +19,7 @@ package com.rpc.core.demo.netty.server;
 
 import com.rpc.core.demo.netty.common.RpcDecoder;
 import com.rpc.core.demo.netty.common.RpcEncoder;
+import com.rpc.core.demo.proxy.RpcByteBuddy;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -27,8 +28,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationContext;
-import org.springframework.stereotype.Component;
 
 /**
  * Netty Server 启动类
@@ -36,11 +35,15 @@ import org.springframework.stereotype.Component;
  * @author lw1243925457
  */
 @Slf4j
-@Component
 public class RpcNettyServer {
 
     private EventLoopGroup boss;
     private EventLoopGroup worker;
+    private int port;
+
+    public RpcNettyServer(int port) {
+        this.port = port;
+    }
 
     public void destroy() {
         worker.shutdownGracefully();
@@ -64,7 +67,6 @@ public class RpcNettyServer {
                     }
                 });
 
-        int port = 8080;
         Channel channel = serverBootstrap.bind(port).sync().channel();
         log.info("Netty server listen in port: " + port);
         channel.closeFuture().sync();
