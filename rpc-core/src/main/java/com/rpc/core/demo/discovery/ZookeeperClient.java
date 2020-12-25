@@ -17,26 +17,11 @@
 
 package com.rpc.core.demo.discovery;
 
-import com.google.common.base.Joiner;
-import com.rpc.core.demo.api.ServiceProviderDesc;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.RetryPolicy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
-import org.apache.curator.utils.CloseableUtils;
-import org.apache.curator.x.discovery.ServiceDiscovery;
-import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
-import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.curator.x.discovery.ServiceProvider;
-import org.apache.curator.x.discovery.details.JsonInstanceSerializer;
-
-import java.io.Closeable;
-import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author lw1243925457
@@ -44,11 +29,11 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class ZookeeperClient {
 
-    public static final String REGISTER_ROOT_PATH = "rpc";
+    static final String REGISTER_ROOT_PATH = "rpc";
 
-    protected final CuratorFramework client;
-   
-    public ZookeeperClient() {
+    protected CuratorFramework client;
+
+    ZookeeperClient() {
         RetryPolicy retryPolicy = new ExponentialBackoffRetry(1000, 3);
         this.client = CuratorFrameworkFactory.builder()
                 .connectString("localhost:2181")

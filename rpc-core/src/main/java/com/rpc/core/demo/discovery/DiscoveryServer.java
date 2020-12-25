@@ -23,12 +23,17 @@ import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.details.JsonInstanceSerializer;
 
+import java.io.IOException;
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author lw1243925457
  */
 public class DiscoveryServer extends ZookeeperClient {
+
+    List<ServiceDiscovery<ServiceProviderDesc>> discoveryList = new ArrayList<>();
 
     public DiscoveryServer() throws Exception {
     }
@@ -58,5 +63,14 @@ public class DiscoveryServer extends ZookeeperClient {
                 .thisInstance(instance)
                 .build();
         discovery.start();
+
+        discoveryList.add(discovery);
+    }
+
+    public void close() throws IOException {
+        for (ServiceDiscovery<ServiceProviderDesc> discovery: discoveryList) {
+            discovery.close();
+        }
+        client.close();
     }
 }

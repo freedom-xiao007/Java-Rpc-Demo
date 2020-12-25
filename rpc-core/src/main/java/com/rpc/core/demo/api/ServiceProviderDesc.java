@@ -21,8 +21,6 @@ import com.fasterxml.jackson.annotation.JsonRootName;
 import lombok.Builder;
 import lombok.Data;
 
-import java.net.InetAddress;
-
 /**
  * @author lw1243925457
  */
@@ -41,13 +39,16 @@ public class ServiceProviderDesc {
 
     String version;
 
+    String id;
+
     private ServiceProviderDesc() {}
 
-    public ServiceProviderDesc(String serviceClass, String host, Integer port, String group, String version) {
+    public ServiceProviderDesc(String serviceClass, String host, Integer port, String group, String version, String id) {
         this.serviceClass = serviceClass;
         this.host = host;
         this.port = port;
         this.group = group;
         this.version = version;
+        this.id = id;
     }
 }

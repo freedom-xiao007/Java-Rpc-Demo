@@ -20,6 +20,7 @@ package com.rpc.core.demo.proxy;
 import com.alibaba.fastjson.JSON;
 import com.rpc.core.demo.api.RpcRequest;
 import com.rpc.core.demo.api.RpcResponse;
+import com.rpc.core.demo.discovery.DiscoveryClient;
 import com.rpc.core.demo.netty.client.RpcNettyClientSync;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cglib.proxy.MethodInterceptor;
@@ -40,6 +41,7 @@ public class RpcInvocationHandler implements InvocationHandler, MethodIntercepto
     private final Class<?> serviceClass;
     private final String group;
     private final String version;
+    private final DiscoveryClient discoveryClient = new DiscoveryClient();
 
     <T> RpcInvocationHandler(Class<T> serviceClass) {
         this.serviceClass = serviceClass;
@@ -85,7 +87,16 @@ public class RpcInvocationHandler implements InvocationHandler, MethodIntercepto
         rpcRequest.setGroup(group);
         rpcRequest.setVersion(version);
 
-        String url = "";
+        String url = null;
+        try {
+            url = "http://" + discoveryClient.getProviders(service.getName(), group, version);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        if (url == null) {
+            return null;
+        }
 
         // 客户端使用的 netty，发送请求到服务端，拿到结果（自定义结构：rpcfxResponse)
         log.info("Client send request to Server");

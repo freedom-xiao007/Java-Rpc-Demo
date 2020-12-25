@@ -49,7 +49,7 @@ public class ClientApplication {
         }
         System.out.println("find user id=1 from server: " + user.getName());
 
-        OrderService orderService = client.create(OrderService.class, "http://localhost:8080/");
+        OrderService orderService = client.create(OrderService.class);
         Order order = orderService.findById(1992129);
         if (order == null) {
             log.info("Clint service invoke Error");

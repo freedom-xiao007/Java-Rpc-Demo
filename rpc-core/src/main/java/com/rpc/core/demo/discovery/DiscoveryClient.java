@@ -17,6 +17,7 @@
 
 package com.rpc.core.demo.discovery;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.google.common.base.Joiner;
 import com.rpc.core.demo.api.ServiceProviderDesc;
@@ -24,17 +25,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.CuratorCache;
 import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
-import org.apache.curator.utils.CloseableUtils;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.curator.x.discovery.details.JsonInstanceSerializer;
 
-import java.io.Closeable;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author lw1243925457
@@ -45,33 +43,37 @@ public class DiscoveryClient extends ZookeeperClient {
     /**
      * group -> version -> provider cache -> provider instance
      */
-    private Map<String, Map<String, Map<String, Map<String, ServiceInstance<ServiceProviderDesc>>>>> providersCache = new HashMap<>();
-
-    private final ConcurrentHashMap<String, ServiceProvider<ServiceProviderDesc>> cache = new ConcurrentHashMap<>();
-
-    private final Object lock = new Object();
-
-    private final List<Closeable> closeableList = new ArrayList<>();
+    private Map<String, Map<String, Map<String, List<ServiceProviderDesc>>>> providersCache = new HashMap<>();
 
     private final ServiceDiscovery<ServiceProviderDesc> serviceDiscovery;
     private final CuratorCache resourcesCache;
 
-    public DiscoveryClient() throws Exception {
+    public DiscoveryClient() {
         JsonInstanceSerializer<ServiceProviderDesc> serializer = new JsonInstanceSerializer<>(ServiceProviderDesc.class);
         serviceDiscovery = ServiceDiscoveryBuilder.builder(ServiceProviderDesc.class)
                 .client(client)
                 .basePath(REGISTER_ROOT_PATH)
                 .serializer(serializer)
                 .build();
-        serviceDiscovery.start();
 
-        getAllProviders();
+        try {
+            serviceDiscovery.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        try {
+            getAllProviders();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         this.resourcesCache = CuratorCache.build(this.client, "/");
         watchResources();
     }
 
     private void getAllProviders() throws Exception {
+        System.out.println("\n\n======================= init : get all provider");
         ServiceProvider<ServiceProviderDesc> providers = serviceDiscovery.serviceProviderBuilder()
                 .serviceName("")
                 .build();
@@ -81,58 +83,42 @@ public class DiscoveryClient extends ZookeeperClient {
         for (ServiceInstance<ServiceProviderDesc> instance: instances) {
             System.out.println(instance.toString());
             ServiceProviderDesc serviceProviderDesc = instance.getPayload();
-            String group = serviceProviderDesc.getGroup();
-            String version = serviceProviderDesc.getVersion();
+            serviceProviderDesc.setId(instance.getId());
 
-            groupMap = providersCache.getOrDefault(group, new HashMap<>());
-        }
-    }
+            addToCache(serviceProviderDesc);
 
-    public ServiceInstance<ServiceProviderDesc> getProviders(String service, String group, String version) throws Exception {
-        String key = Joiner.on(":").join(Arrays.asList(service, group, version));
-        ServiceProvider<ServiceProviderDesc> provider = cache.get(key);
-
-        if (provider == null) {
-            synchronized (lock) {
-                provider = cache.get(key);
-                if (provider == null) {
-                    provider = serviceDiscovery.serviceProviderBuilder()
-                            .serviceName(service)
-                            .build();
-
-                    provider.start();
-                    Collection<ServiceInstance<ServiceProviderDesc>> instances = provider.getAllInstances();
-                    for (ServiceInstance<ServiceProviderDesc> instance: instances) {
-                        System.out.println(instance.toString());
-                    }
-
-                    closeableList.add(provider);
-                    cache.put(key, provider);
-                }
-            }
+            System.out.println("add provider: " + instance.toString());
         }
 
-        return provider.getInstance();
+        System.out.println("======================= init : get all provider end\n\n");
     }
 
-    public synchronized void close() {
-        for (Closeable closeable: closeableList) {
-            CloseableUtils.closeQuietly(closeable);
+    public void addToCache(ServiceProviderDesc serviceProviderDesc) {
+        String group = serviceProviderDesc.getGroup();
+        String version = serviceProviderDesc.getVersion();
+        String provider = Joiner.on(":").join(serviceProviderDesc.getServiceClass(), group, version);
+
+        Map<String, Map<String, List<ServiceProviderDesc>>> groupMap = providersCache.getOrDefault(group, new HashMap<>());
+        Map<String, List<ServiceProviderDesc>> versionMap = groupMap.getOrDefault(version, new HashMap<>());
+        List<ServiceProviderDesc> instanceList = versionMap.getOrDefault(provider, new ArrayList<>());
+
+        instanceList.add(serviceProviderDesc);
+
+        versionMap.put(provider, instanceList);
+        groupMap.put(version, versionMap);
+        providersCache.put(group, groupMap);
+    }
+
+    public String getProviders(String service, String group, String version) throws Exception {
+        String key = Joiner.on(":").join(service, group, version);
+        if (!providersCache.containsKey(group) || !providersCache.get(group).containsKey(version)) {
+            return null;
         }
-    }
-
-    public void listener() {
-        CuratorCache cache = CuratorCache.build(this.client, "/");
-        CuratorCacheListener cacheListener = new CuratorCacheListener() {
-            @Override
-            public void event(Type type, ChildData childData, ChildData childData1) {
-                System.out.println("Type:: " + type);
-                System.out.println(childData.toString());
-                System.out.println(childData1.toString());
-            }
-        };
-        cache.listenable().addListener(cacheListener);
-        cache.start();
+        List<ServiceProviderDesc> instanceList = providersCache.get(group).get(version).get(key);
+        if (instanceList == null || instanceList.isEmpty()) {
+            return null;
+        }
+        return instanceList.get(0).getHost() + ":" + instanceList.get(0).getPort();
     }
 
     private void watchResources() {
@@ -147,10 +133,23 @@ public class DiscoveryClient extends ZookeeperClient {
     }
 
     private void addProvider(ChildData node) {
+        System.out.println("\n\n=================== add new provider ============================");
+
         System.out.printf("Node created: [%s:%s]%n", node.getPath(), new String(node.getData()));
+        if (providerDataEmpty(node)) {
+            return;
+        }
         String jsonValue = new String(node.getData(), StandardCharsets.UTF_8);
-        JSONObject obj = (JSONObject) JSONObject.parse(jsonValue);
-        System.out.println(obj.toString());
+        JSONObject jsonObject = (JSONObject) JSONObject.parse(jsonValue);
+        System.out.println(jsonObject.toString());
+
+        ServiceProviderDesc serviceProviderDesc = JSON.parseObject(jsonObject.getString("payload"), ServiceProviderDesc.class);
+        serviceProviderDesc.setId(jsonObject.getString("id"));
+        System.out.println(serviceProviderDesc.toString());
+
+        addToCache(serviceProviderDesc);
+
+        System.out.println("=================== add new provider end ============================\n\n");
     }
 
     private void updateProvider(ChildData oldNode, ChildData newNode) {
@@ -159,21 +158,59 @@ public class DiscoveryClient extends ZookeeperClient {
     }
 
     private void deleteProvider(ChildData oldNode) {
+        System.out.println("\n\n=================== delete provider ============================");
+
         System.out.printf("Node deleted, Old value: [%s: %s]%n", oldNode.getPath(), new String(oldNode.getData()));
+        if (providerDataEmpty(oldNode)) {
+            return;
+        }
+        String jsonValue = new String(oldNode.getData(), StandardCharsets.UTF_8);
+        JSONObject instance = (JSONObject) JSONObject.parse(jsonValue);
+        System.out.println(instance.toString());
+
+        ServiceProviderDesc serviceProviderDesc = JSON.parseObject(instance.getString("payload"), ServiceProviderDesc.class);
+        System.out.println(serviceProviderDesc.toString());
+
+        String group = serviceProviderDesc.getGroup();
+        String version = serviceProviderDesc.getVersion();
+        String provider = Joiner.on(":").join(serviceProviderDesc.getServiceClass(), group, version);
+
+        deleteCache(provider, group, version, instance.getString("id"));
+
+        System.out.println("=================== delete provider end ============================\n\n");
     }
 
-    public static void main(String[] args) throws Exception {
-        DiscoveryClient discoveryClient = new DiscoveryClient();
-//        ServiceInstance<ServiceProviderDesc> provider = discoveryClient.getProviders("com.rpc.demo.service.UserService", "group2", "v2");
-//        System.out.println(provider.toString());
-//
-//        ServiceProviderDesc serviceProviderDesc = provider.getPayload();
-//        System.out.println(serviceProviderDesc.toString());
-
-//        discoveryClient.listener();
-
-        while (true) {
-            Thread.sleep(10);
+    private void deleteCache(String provider, String group, String version, String id) {
+        if (!providersCache.containsKey(group) || !providersCache.get(group).containsKey(version)) {
+            return;
         }
+        List<ServiceProviderDesc> instanceList = providersCache.get(group).get(version).get(provider);
+        if (instanceList == null || instanceList.isEmpty()) {
+            return;
+        }
+
+        List<ServiceProviderDesc> duplicate = new ArrayList<>(instanceList);
+        int removeIndex = -1;
+        for (int i = 0; i < instanceList.size(); i++) {
+            if (id.equals(instanceList.get(i).getId())) {
+                removeIndex = i;
+                break;
+            }
+        }
+
+        if (removeIndex != -1) {
+            duplicate.remove(removeIndex);
+        }
+
+        providersCache.get(group).get(version).put(provider, duplicate);
+        System.out.println("delete provider: " + provider);
+    }
+
+    private boolean providerDataEmpty(ChildData node) {
+        return node.getData().length == 0;
+    }
+
+    public synchronized void close() {
+        client.close();
     }
 }
