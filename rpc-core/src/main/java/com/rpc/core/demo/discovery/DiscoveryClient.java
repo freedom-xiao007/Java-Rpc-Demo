@@ -28,7 +28,6 @@ import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
 import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.curator.x.discovery.ServiceProvider;
 import org.apache.curator.x.discovery.details.JsonInstanceSerializer;
 
 import java.nio.charset.StandardCharsets;
@@ -52,7 +51,7 @@ public class DiscoveryClient extends ZookeeperClient {
         JsonInstanceSerializer<ServiceProviderDesc> serializer = new JsonInstanceSerializer<>(ServiceProviderDesc.class);
         serviceDiscovery = ServiceDiscoveryBuilder.builder(ServiceProviderDesc.class)
                 .client(client)
-                .basePath(REGISTER_ROOT_PATH)
+                .basePath("/" + REGISTER_ROOT_PATH)
                 .serializer(serializer)
                 .build();
 
@@ -74,20 +73,22 @@ public class DiscoveryClient extends ZookeeperClient {
 
     private void getAllProviders() throws Exception {
         System.out.println("\n\n======================= init : get all provider");
-        ServiceProvider<ServiceProviderDesc> providers = serviceDiscovery.serviceProviderBuilder()
-                .serviceName("")
-                .build();
-        providers.start();
 
-        Collection<ServiceInstance<ServiceProviderDesc>> instances = providers.getAllInstances();
-        for (ServiceInstance<ServiceProviderDesc> instance: instances) {
-            System.out.println(instance.toString());
-            ServiceProviderDesc serviceProviderDesc = instance.getPayload();
-            serviceProviderDesc.setId(instance.getId());
+        Collection<String>  serviceNames = serviceDiscovery.queryForNames();
+        System.out.println(serviceNames.size() + " type(s)");
+        for ( String serviceName : serviceNames ) {
+            Collection<ServiceInstance<ServiceProviderDesc>> instances = serviceDiscovery.queryForInstances(serviceName);
+            System.out.println(serviceName);
 
-            addToCache(serviceProviderDesc);
+            for ( ServiceInstance<ServiceProviderDesc> instance : instances ) {
+                System.out.println(instance.toString());
+                ServiceProviderDesc serviceProviderDesc = instance.getPayload();
+                serviceProviderDesc.setId(instance.getId());
 
-            System.out.println("add provider: " + instance.toString());
+                addToCache(serviceProviderDesc);
+
+                System.out.println("add provider: " + instance.toString());
+            }
         }
 
         System.out.println("======================= init : get all provider end\n\n");
@@ -139,6 +140,7 @@ public class DiscoveryClient extends ZookeeperClient {
         if (providerDataEmpty(node)) {
             return;
         }
+
         String jsonValue = new String(node.getData(), StandardCharsets.UTF_8);
         JSONObject jsonObject = (JSONObject) JSONObject.parse(jsonValue);
         System.out.println(jsonObject.toString());
@@ -164,6 +166,7 @@ public class DiscoveryClient extends ZookeeperClient {
         if (providerDataEmpty(oldNode)) {
             return;
         }
+
         String jsonValue = new String(oldNode.getData(), StandardCharsets.UTF_8);
         JSONObject instance = (JSONObject) JSONObject.parse(jsonValue);
         System.out.println(instance.toString());
