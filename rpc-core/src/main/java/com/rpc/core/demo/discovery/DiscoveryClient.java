@@ -19,7 +19,9 @@ package com.rpc.core.demo.discovery;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
 import com.google.common.base.Joiner;
+import com.rpc.core.demo.api.ProviderInfo;
 import com.rpc.core.demo.api.ServiceProviderDesc;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.recipes.cache.ChildData;
@@ -28,8 +30,8 @@ import org.apache.curator.framework.recipes.cache.CuratorCacheListener;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
 import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.curator.x.discovery.details.JsonInstanceSerializer;
 
+import javax.swing.plaf.synth.SynthUI;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -42,17 +44,15 @@ public class DiscoveryClient extends ZookeeperClient {
     /**
      * group -> version -> provider cache -> provider instance
      */
-    private Map<String, Map<String, Map<String, List<ServiceProviderDesc>>>> providersCache = new HashMap<>();
+    private Map<String, List<ProviderInfo>> providersCache = new HashMap<>();
 
-    private final ServiceDiscovery<ServiceProviderDesc> serviceDiscovery;
+    private final ServiceDiscovery<String> serviceDiscovery;
     private final CuratorCache resourcesCache;
 
     public DiscoveryClient() {
-        JsonInstanceSerializer<ServiceProviderDesc> serializer = new JsonInstanceSerializer<>(ServiceProviderDesc.class);
-        serviceDiscovery = ServiceDiscoveryBuilder.builder(ServiceProviderDesc.class)
+        serviceDiscovery = ServiceDiscoveryBuilder.builder(String.class)
                 .client(client)
                 .basePath("/" + REGISTER_ROOT_PATH)
-                .serializer(serializer)
                 .build();
 
         try {
@@ -77,56 +77,44 @@ public class DiscoveryClient extends ZookeeperClient {
         Collection<String>  serviceNames = serviceDiscovery.queryForNames();
         System.out.println(serviceNames.size() + " type(s)");
         for ( String serviceName : serviceNames ) {
-            Collection<ServiceInstance<ServiceProviderDesc>> instances = serviceDiscovery.queryForInstances(serviceName);
+            Collection<ServiceInstance<String>> instances = serviceDiscovery.queryForInstances(serviceName);
             System.out.println(serviceName);
 
-            for ( ServiceInstance<ServiceProviderDesc> instance : instances ) {
+            for ( ServiceInstance<String> instance : instances ) {
                 System.out.println(instance.toString());
-                ServiceProviderDesc serviceProviderDesc = instance.getPayload();
-                serviceProviderDesc.setId(instance.getId());
 
-                addToCache(serviceProviderDesc);
+                String url = "http://" + instance.getAddress() + ":" + instance.getPort();
+                ProviderInfo providerInfo = new ProviderInfo(instance.getId(), url);
+
+                List<ProviderInfo> providerList = providersCache.getOrDefault(instance.getName(), new ArrayList<>());
+                providerList.add(providerInfo);
+                providersCache.put(instance.getName(), providerList);
 
                 System.out.println("add provider: " + instance.toString());
             }
         }
 
+        System.out.println();
+        for(String key: providersCache.keySet()) {
+            System.out.println(key + " : " + providersCache.get(key));
+        }
+
         System.out.println("======================= init : get all provider end\n\n");
     }
 
-    public void addToCache(ServiceProviderDesc serviceProviderDesc) {
-        String group = serviceProviderDesc.getGroup();
-        String version = serviceProviderDesc.getVersion();
-        String provider = Joiner.on(":").join(serviceProviderDesc.getServiceClass(), group, version);
-
-        Map<String, Map<String, List<ServiceProviderDesc>>> groupMap = providersCache.getOrDefault(group, new HashMap<>());
-        Map<String, List<ServiceProviderDesc>> versionMap = groupMap.getOrDefault(version, new HashMap<>());
-        List<ServiceProviderDesc> instanceList = versionMap.getOrDefault(provider, new ArrayList<>());
-
-        instanceList.add(serviceProviderDesc);
-
-        versionMap.put(provider, instanceList);
-        groupMap.put(version, versionMap);
-        providersCache.put(group, groupMap);
-    }
-
     public String getProviders(String service, String group, String version) throws Exception {
-        String key = Joiner.on(":").join(service, group, version);
-        if (!providersCache.containsKey(group) || !providersCache.get(group).containsKey(version)) {
+        String provider = Joiner.on(":").join(service, group, version);
+        if (!providersCache.containsKey(provider) || providersCache.get(provider).isEmpty()) {
             return null;
         }
-        List<ServiceProviderDesc> instanceList = providersCache.get(group).get(version).get(key);
-        if (instanceList == null || instanceList.isEmpty()) {
-            return null;
-        }
-        return instanceList.get(0).getHost() + ":" + instanceList.get(0).getPort();
+        return providersCache.get(provider).get(0).getUrl();
     }
 
     private void watchResources() {
         CuratorCacheListener listener = CuratorCacheListener.builder()
-                .forCreates(node -> addProvider(node))
-                .forChanges((oldNode, node) -> updateProvider(oldNode, node))
-                .forDeletes(oldNode -> deleteProvider(oldNode))
+                .forCreates(this::addProvider)
+                .forChanges(this::updateProvider)
+                .forDeletes(this::deleteProvider)
                 .forInitialized(() -> { log.info("Resources Cache initialized"); })
                 .build();
         resourcesCache.listenable().addListener(listener);
@@ -142,14 +130,15 @@ public class DiscoveryClient extends ZookeeperClient {
         }
 
         String jsonValue = new String(node.getData(), StandardCharsets.UTF_8);
-        JSONObject jsonObject = (JSONObject) JSONObject.parse(jsonValue);
-        System.out.println(jsonObject.toString());
+        JSONObject instance = (JSONObject) JSONObject.parse(jsonValue);
+        System.out.println(instance.toString());
 
-        ServiceProviderDesc serviceProviderDesc = JSON.parseObject(jsonObject.getString("payload"), ServiceProviderDesc.class);
-        serviceProviderDesc.setId(jsonObject.getString("id"));
-        System.out.println(serviceProviderDesc.toString());
+        String url = "http://" + instance.get("address") + ":" + instance.get("port");
+        ProviderInfo providerInfo = new ProviderInfo(instance.get("id").toString(), url);
 
-        addToCache(serviceProviderDesc);
+        List<ProviderInfo> providerList = providersCache.getOrDefault(instance.get("name").toString(), new ArrayList<>());
+        providerList.add(providerInfo);
+        providersCache.put(instance.get("name").toString(), providerList);
 
         System.out.println("=================== add new provider end ============================\n\n");
     }
@@ -171,42 +160,20 @@ public class DiscoveryClient extends ZookeeperClient {
         JSONObject instance = (JSONObject) JSONObject.parse(jsonValue);
         System.out.println(instance.toString());
 
-        ServiceProviderDesc serviceProviderDesc = JSON.parseObject(instance.getString("payload"), ServiceProviderDesc.class);
-        System.out.println(serviceProviderDesc.toString());
-
-        String group = serviceProviderDesc.getGroup();
-        String version = serviceProviderDesc.getVersion();
-        String provider = Joiner.on(":").join(serviceProviderDesc.getServiceClass(), group, version);
-
-        deleteCache(provider, group, version, instance.getString("id"));
-
-        System.out.println("=================== delete provider end ============================\n\n");
-    }
-
-    private void deleteCache(String provider, String group, String version, String id) {
-        if (!providersCache.containsKey(group) || !providersCache.get(group).containsKey(version)) {
-            return;
-        }
-        List<ServiceProviderDesc> instanceList = providersCache.get(group).get(version).get(provider);
-        if (instanceList == null || instanceList.isEmpty()) {
-            return;
-        }
-
-        List<ServiceProviderDesc> duplicate = new ArrayList<>(instanceList);
-        int removeIndex = -1;
-        for (int i = 0; i < instanceList.size(); i++) {
-            if (id.equals(instanceList.get(i).getId())) {
-                removeIndex = i;
+        String provider = instance.get("name").toString();
+        int deleteIndex = -1;
+        for (int i = 0; i < providersCache.get(provider).size(); i++) {
+            if (providersCache.get(provider).get(i).getId().equals(instance.get("id").toString())) {
+                deleteIndex = i;
                 break;
             }
         }
 
-        if (removeIndex != -1) {
-            duplicate.remove(removeIndex);
+        if (deleteIndex != -1) {
+            providersCache.get(provider).remove(deleteIndex);
         }
 
-        providersCache.get(group).get(version).put(provider, duplicate);
-        System.out.println("delete provider: " + provider);
+        System.out.println("=================== delete provider end ============================\n\n");
     }
 
     private boolean providerDataEmpty(ChildData node) {

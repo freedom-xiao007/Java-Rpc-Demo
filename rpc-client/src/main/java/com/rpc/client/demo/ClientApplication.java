@@ -38,16 +38,13 @@ public class ClientApplication {
 
         RpcClient client = new RpcByteBuddy();
 
-//        System.out.println("----------------- v1 ---------------------");
-//        UserService userService = client.create(UserService.class, "http://localhost:8080/");
-        System.out.println("----------------- v2 ---------------------");
         UserService userService = client.create(UserService.class, "group2", "v2");
         User user = userService.findById(1);
         if (user == null) {
             log.info("Clint service invoke Error");
             return;
         }
-        System.out.println("find user id=1 from server: " + user.getName());
+        System.out.println("\n\nfind user id=1 from server: " + user.getName());
 
         OrderService orderService = client.create(OrderService.class);
         Order order = orderService.findById(1992129);
@@ -55,6 +52,6 @@ public class ClientApplication {
             log.info("Clint service invoke Error");
             return;
         }
-        System.out.println(String.format("find order name=%s, user=%d",order.getName(),order.getUserId()));
+        System.out.println("\n\n" + String.format("find order name=%s, user=%d",order.getName(),order.getUserId()));
     }
 }

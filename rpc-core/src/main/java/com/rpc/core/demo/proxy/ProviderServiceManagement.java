@@ -17,6 +17,7 @@
 
 package com.rpc.core.demo.proxy;
 
+import com.google.common.base.Joiner;
 import com.rpc.core.demo.annotation.ProviderService;
 import com.rpc.core.demo.api.RpcRequest;
 import com.rpc.core.demo.discovery.DiscoveryServer;
@@ -39,7 +40,7 @@ public class ProviderServiceManagement {
     /**
      * group -> version -> service class
      */
-    private static Map<String, Map<String, Map<String, Object>>> proxyMap = new HashMap<>();
+    private static Map<String, Object> proxyMap = new HashMap<>();
 
     public static void init(String packageName, int port) throws Exception {
         System.out.println("\n-------- Loader Rpc Provider class start ----------------------\n");
@@ -54,12 +55,9 @@ public class ProviderServiceManagement {
             }
             String group = annotation.group();
             String version = annotation.version();
-            Map<String, Map<String, Object>> groupMap = proxyMap.getOrDefault(group, new HashMap<>(16));
-            Map<String, Object> versionMap = groupMap.getOrDefault(version, new HashMap<>(16));
+            String provider = Joiner.on(":").join(annotation.service(), group, version);
 
-            versionMap.put(annotation.service(), c.newInstance());
-            groupMap.put(version, versionMap);
-            proxyMap.put(group, groupMap);
+            proxyMap.put(provider, c.newInstance());
 
             serviceRegister.registerService(annotation.service(), group, version, port);
 
@@ -78,7 +76,7 @@ public class ProviderServiceManagement {
         if (request.getVersion() != null) {
             version = request.getVersion();
         }
-        return proxyMap.get(group).get(version).get(className);
+        return proxyMap.get(Joiner.on(":").join(className, group, version));
     }
 
     /**

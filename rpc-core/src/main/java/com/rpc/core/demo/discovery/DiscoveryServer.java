@@ -17,11 +17,10 @@
 
 package com.rpc.core.demo.discovery;
 
-import com.rpc.core.demo.api.ServiceProviderDesc;
+import com.google.common.base.Joiner;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
 import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.curator.x.discovery.details.JsonInstanceSerializer;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -33,33 +32,21 @@ import java.util.List;
  */
 public class DiscoveryServer extends ZookeeperClient {
 
-    List<ServiceDiscovery<ServiceProviderDesc>> discoveryList = new ArrayList<>();
+    List<ServiceDiscovery<String>> discoveryList = new ArrayList<>();
 
-    public DiscoveryServer() throws Exception {
+    public DiscoveryServer() {
     }
 
     public void registerService(String service, String group, String version, int port) throws Exception {
-        ServiceProviderDesc serviceProviderDesc = ServiceProviderDesc.builder()
-                .serviceClass(service)
-                .host(InetAddress.getLocalHost().getHostAddress())
-                .port(port)
-                .group(group)
-                .version(version)
-                .build();
-
-        ServiceInstance<ServiceProviderDesc> instance = ServiceInstance.<ServiceProviderDesc>builder()
-                .name(service)
+        ServiceInstance<String> instance = ServiceInstance.<String>builder()
+                .name(Joiner.on(":").join(service, group, version))
                 .port(port)
                 .address(InetAddress.getLocalHost().getHostAddress())
-                .payload(serviceProviderDesc)
                 .build();
 
-        JsonInstanceSerializer<ServiceProviderDesc> serializer = new JsonInstanceSerializer<>(ServiceProviderDesc.class);
-
-        ServiceDiscovery<ServiceProviderDesc> discovery = ServiceDiscoveryBuilder.builder(ServiceProviderDesc.class)
+        ServiceDiscovery<String> discovery = ServiceDiscoveryBuilder.builder(String.class)
                 .client(client)
                 .basePath(REGISTER_ROOT_PATH)
-                .serializer(serializer)
                 .thisInstance(instance)
                 .build();
         discovery.start();
@@ -68,7 +55,7 @@ public class DiscoveryServer extends ZookeeperClient {
     }
 
     public void close() throws IOException {
-        for (ServiceDiscovery<ServiceProviderDesc> discovery: discoveryList) {
+        for (ServiceDiscovery<String> discovery: discoveryList) {
             discovery.close();
         }
         client.close();

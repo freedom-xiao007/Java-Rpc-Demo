@@ -89,7 +89,7 @@ public class RpcInvocationHandler implements InvocationHandler, MethodIntercepto
 
         String url = null;
         try {
-            url = "http://" + discoveryClient.getProviders(service.getName(), group, version);
+            url = discoveryClient.getProviders(service.getName(), group, version);
         } catch (Exception e) {
             e.printStackTrace();
         }

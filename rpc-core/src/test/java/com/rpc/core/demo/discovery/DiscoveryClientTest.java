@@ -42,7 +42,7 @@ public class DiscoveryClientTest {
         assertNull(discoveryClient.getProviders("service1", "group", "version"));
 
         // add get provider
-        String exceptValue = Joiner.on(":").join(InetAddress.getLocalHost().getHostAddress(), 8080);
+        String exceptValue = "http://" + Joiner.on(":").join(InetAddress.getLocalHost().getHostAddress(), 8080);
         assertEquals(discoveryClient.getProviders("service", "group", "version"), exceptValue);
 
         // server add new provider, test client add new provider
