@@ -21,6 +21,8 @@ import com.google.common.base.Joiner;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -33,27 +35,30 @@ public class DiscoveryClientTest {
     @Test
     public void test() throws Exception {
         DiscoveryServer discoveryServer = new DiscoveryServer();
-        discoveryServer.registerService("service", "group", "version", 8080);
+        String tags = "";
+        List<String> filterTags = new ArrayList<>();
+
+        discoveryServer.registerService("service", "group", "version", 8080, tags);
         Thread.sleep(3000);
 
         DiscoveryClient discoveryClient = new DiscoveryClient();
 
         // add get provider of not exist
-        assertNull(discoveryClient.getProviders("service1", "group", "version"));
+        assertNull(discoveryClient.getProviders("service1", "group", "version", filterTags));
 
         // add get provider
         String exceptValue = "http://" + Joiner.on(":").join(InetAddress.getLocalHost().getHostAddress(), 8080);
-        assertEquals(discoveryClient.getProviders("service", "group", "version"), exceptValue);
+        assertEquals(discoveryClient.getProviders("service", "group", "version", filterTags), exceptValue);
 
         // server add new provider, test client add new provider
-        discoveryServer.registerService("service1", "group", "version", 8080);
+        discoveryServer.registerService("service1", "group", "version", 8080, tags);
         Thread.sleep(3000);
-        assertEquals(discoveryClient.getProviders("service1", "group", "version"), exceptValue);
+        assertEquals(discoveryClient.getProviders("service1", "group", "version", filterTags), exceptValue);
 
         // server delete provider, test client delete provider
         discoveryServer.close();
         Thread.sleep(5000);
-        assertNull(discoveryClient.getProviders("service1", "group", "version"));
+        assertNull(discoveryClient.getProviders("service1", "group", "version", filterTags));
 
         discoveryClient.close();
     }

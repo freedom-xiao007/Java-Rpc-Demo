@@ -25,6 +25,8 @@ import java.lang.annotation.Target;
 /**
  * RPC provider service 初始化注解
  *
+ * group,version,targs 都有默认值，是为了兼容以前的版本
+ *
  * @author lw1243925457
  */
 @Target(ElementType.TYPE)
@@ -40,4 +42,6 @@ public @interface ProviderService {
     String group() default "default";
 
     String version() default "default";
+
+    String tags() default "";
 }

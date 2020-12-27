@@ -18,13 +18,14 @@
 package com.rpc.client.demo;
 
 import com.alibaba.fastjson.parser.ParserConfig;
-import com.rpc.core.demo.proxy.RpcByteBuddy;
 import com.rpc.core.demo.proxy.RpcClient;
 import com.rpc.demo.model.Order;
 import com.rpc.demo.model.User;
 import com.rpc.demo.service.OrderService;
 import com.rpc.demo.service.UserService;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.Arrays;
 
 /**
  * @author lw1243925457
@@ -36,7 +37,7 @@ public class ClientApplication {
         ParserConfig.getGlobalInstance().addAccept("com.rpc.demo.model.Order");
         ParserConfig.getGlobalInstance().addAccept("com.rpc.demo.model.User");
 
-        RpcClient client = new RpcByteBuddy();
+        RpcClient client = new RpcClient();
 
         UserService userService = client.create(UserService.class, "group2", "v2");
         User user = userService.findById(1);
@@ -44,7 +45,7 @@ public class ClientApplication {
             log.info("Clint service invoke Error");
             return;
         }
-        System.out.println("\n\nfind user id=1 from server: " + user.getName());
+        System.out.println("\n\nuser1 :: find user id=1 from server: " + user.getName());
 
         OrderService orderService = client.create(OrderService.class);
         Order order = orderService.findById(1992129);
@@ -53,5 +54,21 @@ public class ClientApplication {
             return;
         }
         System.out.println("\n\n" + String.format("find order name=%s, user=%d",order.getName(),order.getUserId()));
+
+        UserService userService2 = client.create(UserService.class, "group2", "v2", Arrays.asList("tag1", "tag2"));
+        User user2 = userService2.findById(1);
+        if (user2 == null) {
+            log.info("Clint service invoke Error");
+            return;
+        }
+        System.out.println("\n\nuser2 :: find user id=1 from server: " + user2.getName());
+
+        UserService userService3 = client.create(UserService.class, "group2", "v2", Arrays.asList("tag3", "tag4"));
+        User user3 = userService3.findById(1);
+        if (user3 == null) {
+            log.info("Clint service invoke Error");
+            return;
+        }
+        System.out.println("\n\nuser3 :: find user id=1 from server: " + user3.getName());
     }
 }

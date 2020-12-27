@@ -29,6 +29,8 @@ import org.springframework.cglib.proxy.MethodProxy;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 用于jdk、cglib、buddy
@@ -41,7 +43,8 @@ public class RpcInvocationHandler implements InvocationHandler, MethodIntercepto
     private final Class<?> serviceClass;
     private final String group;
     private final String version;
-    private final DiscoveryClient discoveryClient = new DiscoveryClient();
+    private final DiscoveryClient discoveryClient = DiscoveryClient.getInstance();
+    private final List<String> tags = new ArrayList<>();
 
     <T> RpcInvocationHandler(Class<T> serviceClass) {
         this.serviceClass = serviceClass;
@@ -50,10 +53,18 @@ public class RpcInvocationHandler implements InvocationHandler, MethodIntercepto
         System.out.println("Client Service Class Reflect: " + group + ":" + version);
     }
 
-    public <T> RpcInvocationHandler(Class<T> serviceClass, String group, String version) {
+    <T> RpcInvocationHandler(Class<T> serviceClass, String group, String version) {
         this.serviceClass = serviceClass;
         this.group = group;
         this.version = version;
+        System.out.println("Client Service Class Reflect: " + group + ":" + version);
+    }
+
+    <T> RpcInvocationHandler(Class<T> serviceClass, String group, String version, List<String> tags) {
+        this.serviceClass = serviceClass;
+        this.group = group;
+        this.version = version;
+        this.tags.addAll(tags);
         System.out.println("Client Service Class Reflect: " + group + ":" + version);
     }
 
@@ -89,12 +100,13 @@ public class RpcInvocationHandler implements InvocationHandler, MethodIntercepto
 
         String url = null;
         try {
-            url = discoveryClient.getProviders(service.getName(), group, version);
+            url = discoveryClient.getProviders(service.getName(), group, version, tags);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         if (url == null) {
+            System.out.println("\nCan't find provider\n");
             return null;
         }
 

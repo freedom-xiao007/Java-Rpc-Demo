@@ -55,11 +55,12 @@ public class ProviderServiceManagement {
             }
             String group = annotation.group();
             String version = annotation.version();
+            String tags = annotation.tags();
             String provider = Joiner.on(":").join(annotation.service(), group, version);
 
             proxyMap.put(provider, c.newInstance());
 
-            serviceRegister.registerService(annotation.service(), group, version, port);
+            serviceRegister.registerService(annotation.service(), group, version, port, tags);
 
             log.info("load provider class: " + annotation.service() + ":" + group + ":" + version + " :: " + c.getName());
         }

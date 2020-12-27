@@ -19,6 +19,8 @@ package com.rpc.core.demo.api;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * @author lw1243925457
  */
@@ -29,8 +31,11 @@ public class ProviderInfo {
 
     String url;
 
-    public ProviderInfo(String id, String url) {
+    List<String> tags;
+
+    public ProviderInfo(String id, String url, List<String> tags) {
         this.id = id;
         this.url = url;
+        this.tags = tags;
     }
 }

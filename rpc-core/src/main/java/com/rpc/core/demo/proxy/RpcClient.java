@@ -17,18 +17,87 @@
 
 package com.rpc.core.demo.proxy;
 
+import com.google.common.base.Joiner;
+import lombok.SneakyThrows;
+import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.implementation.InvocationHandlerAdapter;
+
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * @author lw1243925457
  */
-public interface RpcClient {
+public class RpcClient {
 
-    /**
-     * create proxy
-     * @param serviceClass service class
-     * @param <T> T
-     * @return proxy class
-     */
-    <T> T create(final Class<T> serviceClass);
+    private ConcurrentHashMap<String, Object> proxyCache = new ConcurrentHashMap<>();
 
-    <T> T create(final Class<T> serviceClass, String group, String version);
+    Object getProxy(String className) {
+        return proxyCache.get(className);
+    }
+
+    Boolean isExit(String className) {
+        return proxyCache.containsKey(className);
+    }
+
+    void add(String className, Object proxy) {
+        proxyCache.put(className, proxy);
+    }
+
+    public <T> T create(Class<T> serviceClass) {
+        if (!isExit(serviceClass.getName())) {
+            add(serviceClass.getName(), newProxy(serviceClass));
+        }
+        return (T) getProxy(serviceClass.getName());
+    }
+
+    public <T> T create(Class<T> serviceClass, String group, String version) {
+        if (!isExit(Joiner.on(":").join(serviceClass.getName(), group, version))) {
+            add(serviceClass.getName(), newProxy(serviceClass, group, version));
+        }
+        return (T) getProxy(serviceClass.getName());
+    }
+
+    public <T> T create(Class<T> serviceClass, String group, String version, List<String> tags) {
+        if (!isExit(Joiner.on(":").join(serviceClass.getName(), group, version, tags.toString()))) {
+            add(serviceClass.getName(), newProxy(serviceClass, group, version, tags));
+        }
+        return (T) getProxy(serviceClass.getName());
+    }
+
+    @SneakyThrows
+    private <T> T newProxy(Class<T> serviceClass, String group, String version) {
+        return (T) new ByteBuddy().subclass(Object.class)
+                .implement(serviceClass)
+                .intercept(InvocationHandlerAdapter.of(new RpcInvocationHandler(serviceClass, group, version)))
+                .make()
+                .load(RpcClient.class.getClassLoader())
+                .getLoaded()
+                .getDeclaredConstructor()
+                .newInstance();
+    }
+
+    @SneakyThrows
+    private <T> T newProxy(Class<T> serviceClass, String group, String version, List<String> tags) {
+        return (T) new ByteBuddy().subclass(Object.class)
+                .implement(serviceClass)
+                .intercept(InvocationHandlerAdapter.of(new RpcInvocationHandler(serviceClass, group, version, tags)))
+                .make()
+                .load(RpcClient.class.getClassLoader())
+                .getLoaded()
+                .getDeclaredConstructor()
+                .newInstance();
+    }
+
+    @SneakyThrows
+    private <T> T newProxy(Class<T> serviceClass) {
+        return (T) new ByteBuddy().subclass(Object.class)
+                .implement(serviceClass)
+                .intercept(InvocationHandlerAdapter.of(new RpcInvocationHandler(serviceClass)))
+                .make()
+                .load(RpcClient.class.getClassLoader())
+                .getLoaded()
+                .getDeclaredConstructor()
+                .newInstance();
+    }
 }

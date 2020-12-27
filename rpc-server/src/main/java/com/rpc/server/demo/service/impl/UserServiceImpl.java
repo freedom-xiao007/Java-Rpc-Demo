@@ -7,7 +7,7 @@ import com.rpc.demo.service.UserService;
 /**
  * @author lw
  */
-@ProviderService(service = "com.rpc.demo.service.UserService")
+@ProviderService(service = "com.rpc.demo.service.UserService", tags = "tag1, tag3")
 public class UserServiceImpl implements UserService {
 
     @Override

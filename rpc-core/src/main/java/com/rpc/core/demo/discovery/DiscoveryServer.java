@@ -37,11 +37,12 @@ public class DiscoveryServer extends ZookeeperClient {
     public DiscoveryServer() {
     }
 
-    public void registerService(String service, String group, String version, int port) throws Exception {
+    public void registerService(String service, String group, String version, int port, String tags) throws Exception {
         ServiceInstance<String> instance = ServiceInstance.<String>builder()
                 .name(Joiner.on(":").join(service, group, version))
                 .port(port)
                 .address(InetAddress.getLocalHost().getHostAddress())
+                .payload(tags)
                 .build();
 
         ServiceDiscovery<String> discovery = ServiceDiscoveryBuilder.builder(String.class)

@@ -19,7 +19,6 @@ package com.rpc.core.demo.netty.server;
 
 import com.rpc.core.demo.netty.common.RpcDecoder;
 import com.rpc.core.demo.netty.common.RpcEncoder;
-import com.rpc.core.demo.proxy.RpcByteBuddy;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;

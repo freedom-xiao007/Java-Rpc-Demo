@@ -17,12 +17,10 @@
 
 package com.rpc.core.demo.discovery;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.alibaba.fastjson.TypeReference;
 import com.google.common.base.Joiner;
 import com.rpc.core.demo.api.ProviderInfo;
-import com.rpc.core.demo.api.ServiceProviderDesc;
+import com.rpc.core.demo.filter.FilterLine;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.CuratorCache;
@@ -31,7 +29,6 @@ import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
 import org.apache.curator.x.discovery.ServiceInstance;
 
-import javax.swing.plaf.synth.SynthUI;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
@@ -40,6 +37,25 @@ import java.util.*;
  */
 @Slf4j
 public class DiscoveryClient extends ZookeeperClient {
+
+    private enum EnumSingleton {
+        /**
+         * 懒汉枚举单例
+         */
+        INSTANCE;
+        private DiscoveryClient instance;
+
+        EnumSingleton(){
+            instance = new DiscoveryClient();
+        }
+        public DiscoveryClient getSingleton(){
+            return instance;
+        }
+    }
+
+    public static DiscoveryClient getInstance(){
+        return EnumSingleton.INSTANCE.getSingleton();
+    }
 
     /**
      * group -> version -> provider cache -> provider instance
@@ -84,7 +100,8 @@ public class DiscoveryClient extends ZookeeperClient {
                 System.out.println(instance.toString());
 
                 String url = "http://" + instance.getAddress() + ":" + instance.getPort();
-                ProviderInfo providerInfo = new ProviderInfo(instance.getId(), url);
+                List<String> tags = Arrays.asList(instance.getPayload().split(","));
+                ProviderInfo providerInfo = new ProviderInfo(instance.getId(), url, tags);
 
                 List<ProviderInfo> providerList = providersCache.getOrDefault(instance.getName(), new ArrayList<>());
                 providerList.add(providerInfo);
@@ -102,12 +119,17 @@ public class DiscoveryClient extends ZookeeperClient {
         System.out.println("======================= init : get all provider end\n\n");
     }
 
-    public String getProviders(String service, String group, String version) throws Exception {
+    public String getProviders(String service, String group, String version, List<String> tags) throws Exception {
         String provider = Joiner.on(":").join(service, group, version);
         if (!providersCache.containsKey(provider) || providersCache.get(provider).isEmpty()) {
             return null;
         }
-        return providersCache.get(provider).get(0).getUrl();
+
+        List<ProviderInfo> providers = FilterLine.filter(providersCache.get(provider), tags);
+        if (providers.isEmpty()) {
+            return null;
+        }
+        return providers.get(0).getUrl();
     }
 
     private void watchResources() {
@@ -134,7 +156,8 @@ public class DiscoveryClient extends ZookeeperClient {
         System.out.println(instance.toString());
 
         String url = "http://" + instance.get("address") + ":" + instance.get("port");
-        ProviderInfo providerInfo = new ProviderInfo(instance.get("id").toString(), url);
+        List<String> tags = Arrays.asList(instance.get("payload").toString().split(","));
+        ProviderInfo providerInfo = new ProviderInfo(instance.get("id").toString(), url, tags);
 
         List<ProviderInfo> providerList = providersCache.getOrDefault(instance.get("name").toString(), new ArrayList<>());
         providerList.add(providerInfo);
@@ -146,6 +169,22 @@ public class DiscoveryClient extends ZookeeperClient {
     private void updateProvider(ChildData oldNode, ChildData newNode) {
         System.out.printf("Node changed, Old: [%s: %s] New: [%s: %s]%n", oldNode.getPath(),
                 new String(oldNode.getData()), newNode.getPath(), new String(newNode.getData()));
+
+        if (providerDataEmpty(newNode)) {
+            return;
+        }
+
+        String jsonValue = new String(newNode.getData(), StandardCharsets.UTF_8);
+        JSONObject instance = (JSONObject) JSONObject.parse(jsonValue);
+        System.out.println(instance.toString());
+
+        String url = "http://" + instance.get("address") + ":" + instance.get("port");
+        List<String> tags = Arrays.asList(instance.get("payload").toString().split(","));
+        ProviderInfo providerInfo = new ProviderInfo(instance.get("id").toString(), url, tags);
+
+        List<ProviderInfo> providerList = providersCache.getOrDefault(instance.get("name").toString(), new ArrayList<>());
+        providerList.add(providerInfo);
+        providersCache.put(instance.get("name").toString(), providerList);
     }
 
     private void deleteProvider(ChildData oldNode) {
