@@ -18,9 +18,11 @@
 package com.rpc.core.demo.discovery;
 
 import com.google.common.base.Joiner;
+import com.rpc.core.demo.api.ProviderInfo;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceDiscoveryBuilder;
 import org.apache.curator.x.discovery.ServiceInstance;
+import org.apache.curator.x.discovery.details.JsonInstanceSerializer;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -32,23 +34,28 @@ import java.util.List;
  */
 public class DiscoveryServer extends ZookeeperClient {
 
-    List<ServiceDiscovery<String>> discoveryList = new ArrayList<>();
+    private List<ServiceDiscovery<ProviderInfo>> discoveryList = new ArrayList<>();
 
     public DiscoveryServer() {
     }
 
-    public void registerService(String service, String group, String version, int port, String tags) throws Exception {
-        ServiceInstance<String> instance = ServiceInstance.<String>builder()
+    public void registerService(String service, String group, String version, int port, List<String> tags,
+                                int weight) throws Exception {
+        ProviderInfo provider = new ProviderInfo(null, null, tags, weight);
+
+        ServiceInstance<ProviderInfo> instance = ServiceInstance.<ProviderInfo>builder()
                 .name(Joiner.on(":").join(service, group, version))
                 .port(port)
                 .address(InetAddress.getLocalHost().getHostAddress())
-                .payload(tags)
+                .payload(provider)
                 .build();
 
-        ServiceDiscovery<String> discovery = ServiceDiscoveryBuilder.builder(String.class)
+        JsonInstanceSerializer<ProviderInfo> serializer = new JsonInstanceSerializer<>(ProviderInfo.class);
+        ServiceDiscovery<ProviderInfo> discovery = ServiceDiscoveryBuilder.builder(ProviderInfo.class)
                 .client(client)
                 .basePath(REGISTER_ROOT_PATH)
                 .thisInstance(instance)
+                .serializer(serializer)
                 .build();
         discovery.start();
 
@@ -56,7 +63,7 @@ public class DiscoveryServer extends ZookeeperClient {
     }
 
     public void close() throws IOException {
-        for (ServiceDiscovery<String> discovery: discoveryList) {
+        for (ServiceDiscovery<ProviderInfo> discovery: discoveryList) {
             discovery.close();
         }
         client.close();

@@ -15,35 +15,12 @@
  * limitations under the License.
  */
 
-package com.rpc.core.demo.annotation;
+package com.rpc.core.demo.balance.loadbalance;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.rpc.core.demo.balance.LoadBalance;
 
 /**
- * RPC provider service 初始化注解
- *
- * group,version,targs 都有默认值，是为了兼容以前的版本
- *
  * @author lw1243925457
  */
-@Target(ElementType.TYPE)
-@Retention(RetentionPolicy.RUNTIME)
-public @interface ProviderService {
-
-    /**
-     * 对应 API 接口
-     * @return API service
-     */
-    String service();
-
-    String group() default "default";
-
-    String version() default "default";
-
-    String tags() default "";
-
-    int weight() default 1;
+abstract class AbstractLoadBalance implements LoadBalance {
 }

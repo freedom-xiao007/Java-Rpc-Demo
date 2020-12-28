@@ -15,32 +15,35 @@
  * limitations under the License.
  */
 
-package com.rpc.core.demo.api;
+package com.rpc.core.demo.balance.loadbalance;
 
-import lombok.Data;
+import com.rpc.core.demo.api.ProviderInfo;
 
 import java.util.List;
+import java.util.Random;
 
 /**
  * @author lw1243925457
  */
-@Data
-public class ProviderInfo {
+public class WeightBalance extends AbstractLoadBalance {
 
-    String id;
+    public static final String NAME = "weight_balance";
 
-    String url;
+    @Override
+    public String select(List<ProviderInfo> providers) {
+        int totalWeight = 0;
+        for (ProviderInfo provider: providers) {
+            totalWeight += provider.getWeight();
+        }
 
-    List<String> tags;
-
-    Integer weight;
-
-    public ProviderInfo() {}
-
-    public ProviderInfo(String id, String url, List<String> tags, int weight) {
-        this.id = id;
-        this.url = url;
-        this.tags = tags;
-        this.weight = weight;
+        int random = new Random().nextInt(totalWeight);
+        System.out.printf("provider amount: %s, random : %d\n", providers.size(), random);
+        for (ProviderInfo provider: providers) {
+            random -= provider.getWeight();
+            if (random <= 0) {
+                return provider.getUrl();
+            }
+        }
+        return providers.get(providers.size() - 1).getUrl();
     }
 }

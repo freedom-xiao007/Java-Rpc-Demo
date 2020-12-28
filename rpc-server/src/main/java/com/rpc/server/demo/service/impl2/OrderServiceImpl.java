@@ -8,7 +8,7 @@ import com.rpc.demo.service.OrderService;
 /**
  * @author lw
  */
-@ProviderService(service = "com.rpc.demo.service.OrderService", tags = "tag2")
+@ProviderService(service = "com.rpc.demo.service.OrderService", tags = "tag2", weight = 8)
 public class OrderServiceImpl implements OrderService {
 
     @Override

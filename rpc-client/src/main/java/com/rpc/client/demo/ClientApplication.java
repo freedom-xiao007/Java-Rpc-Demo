@@ -25,7 +25,9 @@ import com.rpc.demo.service.OrderService;
 import com.rpc.demo.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author lw1243925457
@@ -34,6 +36,7 @@ import java.util.Arrays;
 public class ClientApplication {
 
     public static void main(String[] args) {
+        // fastjson auto setting
         ParserConfig.getGlobalInstance().addAccept("com.rpc.demo.model.Order");
         ParserConfig.getGlobalInstance().addAccept("com.rpc.demo.model.User");
 
@@ -43,32 +46,43 @@ public class ClientApplication {
         User user = userService.findById(1);
         if (user == null) {
             log.info("Clint service invoke Error");
-            return;
+        } else {
+            System.out.println("\n\nuser1 :: find user id=1 from server: " + user.getName());
         }
-        System.out.println("\n\nuser1 :: find user id=1 from server: " + user.getName());
 
         OrderService orderService = client.create(OrderService.class);
         Order order = orderService.findById(1992129);
         if (order == null) {
             log.info("Clint service invoke Error");
-            return;
+        } else {
+            System.out.println("\n\n" + String.format("find order name=%s, user=%d", order.getName(), order.getUserId()));
         }
-        System.out.println("\n\n" + String.format("find order name=%s, user=%d",order.getName(),order.getUserId()));
 
         UserService userService2 = client.create(UserService.class, "group2", "v2", Arrays.asList("tag1", "tag2"));
         User user2 = userService2.findById(1);
         if (user2 == null) {
             log.info("Clint service invoke Error");
-            return;
+        } else {
+            System.out.println("\n\nuser2 :: find user id=1 from server: " + user2.getName());
         }
-        System.out.println("\n\nuser2 :: find user id=1 from server: " + user2.getName());
 
         UserService userService3 = client.create(UserService.class, "group2", "v2", Arrays.asList("tag3", "tag4"));
         User user3 = userService3.findById(1);
         if (user3 == null) {
             log.info("Clint service invoke Error");
-            return;
+        } else {
+            System.out.println("\n\nuser3 :: find user id=1 from server: " + user3.getName());
         }
-        System.out.println("\n\nuser3 :: find user id=1 from server: " + user3.getName());
+
+        // test load balance
+        System.out.println("\n=============== test load balance =======================\n");
+        UserService userService4 = client.create(UserService.class);
+        List<User> userList = new ArrayList<>(10);
+        for(int i = 0; i < 10; i++) {
+            userList.add(userService4.findById(1));
+        }
+        for (User item: userList) {
+            System.out.println(item);
+        }
     }
 }

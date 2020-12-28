@@ -7,11 +7,11 @@ import com.rpc.demo.service.UserService;
 /**
  * @author lw
  */
-@ProviderService(service = "com.rpc.demo.service.UserService", tags = "tag1, tag3")
+@ProviderService(service = "com.rpc.demo.service.UserService", weight = 2)
 public class UserServiceImpl implements UserService {
 
     @Override
     public User findById(Integer id) {
-        return new User(id, "RPC");
+        return new User(id, "RPC weight 2");
     }
 }

@@ -35,10 +35,9 @@ public class DiscoveryClientTest {
     @Test
     public void test() throws Exception {
         DiscoveryServer discoveryServer = new DiscoveryServer();
-        String tags = "";
         List<String> filterTags = new ArrayList<>();
 
-        discoveryServer.registerService("service", "group", "version", 8080, tags);
+        discoveryServer.registerService("service", "group", "version", 8080, filterTags, 1);
         Thread.sleep(3000);
 
         DiscoveryClient discoveryClient = new DiscoveryClient();
@@ -51,7 +50,7 @@ public class DiscoveryClientTest {
         assertEquals(discoveryClient.getProviders("service", "group", "version", filterTags), exceptValue);
 
         // server add new provider, test client add new provider
-        discoveryServer.registerService("service1", "group", "version", 8080, tags);
+        discoveryServer.registerService("service1", "group", "version", 8080, filterTags, 1);
         Thread.sleep(3000);
         assertEquals(discoveryClient.getProviders("service1", "group", "version", filterTags), exceptValue);
 

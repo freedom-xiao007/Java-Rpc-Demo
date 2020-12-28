@@ -17,9 +17,12 @@
 
 package com.rpc.core.demo.discovery;
 
+import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.google.common.base.Joiner;
 import com.rpc.core.demo.api.ProviderInfo;
+import com.rpc.core.demo.balance.LoadBalance;
+import com.rpc.core.demo.balance.loadbalance.WeightBalance;
 import com.rpc.core.demo.filter.FilterLine;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.recipes.cache.ChildData;
@@ -62,11 +65,14 @@ public class DiscoveryClient extends ZookeeperClient {
      */
     private Map<String, List<ProviderInfo>> providersCache = new HashMap<>();
 
-    private final ServiceDiscovery<String> serviceDiscovery;
+    private final ServiceDiscovery<ProviderInfo> serviceDiscovery;
+
     private final CuratorCache resourcesCache;
 
+    private LoadBalance balance = new WeightBalance();
+
     public DiscoveryClient() {
-        serviceDiscovery = ServiceDiscoveryBuilder.builder(String.class)
+        serviceDiscovery = ServiceDiscoveryBuilder.builder(ProviderInfo.class)
                 .client(client)
                 .basePath("/" + REGISTER_ROOT_PATH)
                 .build();
@@ -93,15 +99,16 @@ public class DiscoveryClient extends ZookeeperClient {
         Collection<String>  serviceNames = serviceDiscovery.queryForNames();
         System.out.println(serviceNames.size() + " type(s)");
         for ( String serviceName : serviceNames ) {
-            Collection<ServiceInstance<String>> instances = serviceDiscovery.queryForInstances(serviceName);
+            Collection<ServiceInstance<ProviderInfo>> instances = serviceDiscovery.queryForInstances(serviceName);
             System.out.println(serviceName);
 
-            for ( ServiceInstance<String> instance : instances ) {
+            for ( ServiceInstance<ProviderInfo> instance : instances ) {
                 System.out.println(instance.toString());
 
                 String url = "http://" + instance.getAddress() + ":" + instance.getPort();
-                List<String> tags = Arrays.asList(instance.getPayload().split(","));
-                ProviderInfo providerInfo = new ProviderInfo(instance.getId(), url, tags);
+                ProviderInfo providerInfo = instance.getPayload();
+                providerInfo.setId(instance.getId());
+                providerInfo.setUrl(url);
 
                 List<ProviderInfo> providerList = providersCache.getOrDefault(instance.getName(), new ArrayList<>());
                 providerList.add(providerInfo);
@@ -129,7 +136,8 @@ public class DiscoveryClient extends ZookeeperClient {
         if (providers.isEmpty()) {
             return null;
         }
-        return providers.get(0).getUrl();
+
+        return balance.select(providers);
     }
 
     private void watchResources() {
@@ -156,8 +164,9 @@ public class DiscoveryClient extends ZookeeperClient {
         System.out.println(instance.toString());
 
         String url = "http://" + instance.get("address") + ":" + instance.get("port");
-        List<String> tags = Arrays.asList(instance.get("payload").toString().split(","));
-        ProviderInfo providerInfo = new ProviderInfo(instance.get("id").toString(), url, tags);
+        ProviderInfo providerInfo = JSON.parseObject(instance.get("payload").toString(), ProviderInfo.class);
+        providerInfo.setId(instance.get("id").toString());
+        providerInfo.setUrl(url);
 
         List<ProviderInfo> providerList = providersCache.getOrDefault(instance.get("name").toString(), new ArrayList<>());
         providerList.add(providerInfo);
@@ -179,8 +188,9 @@ public class DiscoveryClient extends ZookeeperClient {
         System.out.println(instance.toString());
 
         String url = "http://" + instance.get("address") + ":" + instance.get("port");
-        List<String> tags = Arrays.asList(instance.get("payload").toString().split(","));
-        ProviderInfo providerInfo = new ProviderInfo(instance.get("id").toString(), url, tags);
+        ProviderInfo providerInfo = JSON.parseObject(instance.get("payload").toString(), ProviderInfo.class);
+        providerInfo.setId(instance.get("id").toString());
+        providerInfo.setUrl(url);
 
         List<ProviderInfo> providerList = providersCache.getOrDefault(instance.get("name").toString(), new ArrayList<>());
         providerList.add(providerInfo);
@@ -221,5 +231,11 @@ public class DiscoveryClient extends ZookeeperClient {
 
     public synchronized void close() {
         client.close();
+    }
+
+    public void setBalance(String balanceAlgorithm) {
+        if (WeightBalance.NAME.equals(balanceAlgorithm)) {
+            this.balance = new WeightBalance();
+        }
     }
 }

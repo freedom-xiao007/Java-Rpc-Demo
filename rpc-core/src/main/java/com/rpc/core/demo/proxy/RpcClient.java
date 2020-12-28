@@ -32,37 +32,40 @@ public class RpcClient {
 
     private ConcurrentHashMap<String, Object> proxyCache = new ConcurrentHashMap<>();
 
-    Object getProxy(String className) {
+    private Object getProxy(String className) {
         return proxyCache.get(className);
     }
 
-    Boolean isExit(String className) {
+    private Boolean isExit(String className) {
         return proxyCache.containsKey(className);
     }
 
-    void add(String className, Object proxy) {
+    private void add(String className, Object proxy) {
         proxyCache.put(className, proxy);
     }
 
     public <T> T create(Class<T> serviceClass) {
-        if (!isExit(serviceClass.getName())) {
-            add(serviceClass.getName(), newProxy(serviceClass));
+        String invoker = serviceClass.getName();
+        if (!isExit(invoker)) {
+            add(invoker, newProxy(serviceClass));
         }
-        return (T) getProxy(serviceClass.getName());
+        return (T) getProxy(invoker);
     }
 
     public <T> T create(Class<T> serviceClass, String group, String version) {
-        if (!isExit(Joiner.on(":").join(serviceClass.getName(), group, version))) {
-            add(serviceClass.getName(), newProxy(serviceClass, group, version));
+        String invoker = Joiner.on(":").join(serviceClass.getName(), group, version);
+        if (!isExit(invoker)) {
+            add(invoker, newProxy(serviceClass, group, version));
         }
-        return (T) getProxy(serviceClass.getName());
+        return (T) getProxy(invoker);
     }
 
     public <T> T create(Class<T> serviceClass, String group, String version, List<String> tags) {
-        if (!isExit(Joiner.on(":").join(serviceClass.getName(), group, version, tags.toString()))) {
-            add(serviceClass.getName(), newProxy(serviceClass, group, version, tags));
+        String invoker = Joiner.on(":").join(serviceClass.getName(), group, version, tags.toString());
+        if (!isExit(invoker)) {
+            add(invoker, newProxy(serviceClass, group, version, tags));
         }
-        return (T) getProxy(serviceClass.getName());
+        return (T) getProxy(invoker);
     }
 
     @SneakyThrows
