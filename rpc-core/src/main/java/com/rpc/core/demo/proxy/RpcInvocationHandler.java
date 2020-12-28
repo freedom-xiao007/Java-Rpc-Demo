@@ -20,6 +20,8 @@ package com.rpc.core.demo.proxy;
 import com.alibaba.fastjson.JSON;
 import com.rpc.core.demo.api.RpcRequest;
 import com.rpc.core.demo.api.RpcResponse;
+import com.rpc.core.demo.balance.loadbalance.ConsistentHashBalance;
+import com.rpc.core.demo.balance.loadbalance.WeightBalance;
 import com.rpc.core.demo.discovery.DiscoveryClient;
 import com.rpc.core.demo.netty.client.RpcNettyClientSync;
 import lombok.extern.slf4j.Slf4j;
@@ -100,7 +102,8 @@ public class RpcInvocationHandler implements InvocationHandler, MethodIntercepto
 
         String url = null;
         try {
-            url = discoveryClient.getProviders(service.getName(), group, version, tags);
+            url = discoveryClient.getProviders(service.getName(), group, version, tags, service.getName(),
+                    method.getName());
         } catch (Exception e) {
             e.printStackTrace();
         }

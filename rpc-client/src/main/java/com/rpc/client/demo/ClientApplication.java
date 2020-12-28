@@ -18,6 +18,7 @@
 package com.rpc.client.demo;
 
 import com.alibaba.fastjson.parser.ParserConfig;
+import com.rpc.core.demo.balance.loadbalance.ConsistentHashBalance;
 import com.rpc.core.demo.proxy.RpcClient;
 import com.rpc.demo.model.Order;
 import com.rpc.demo.model.User;
@@ -41,6 +42,7 @@ public class ClientApplication {
         ParserConfig.getGlobalInstance().addAccept("com.rpc.demo.model.User");
 
         RpcClient client = new RpcClient();
+        RpcClient.setBalanceAlgorithmName(ConsistentHashBalance.NAME);
 
         UserService userService = client.create(UserService.class, "group2", "v2");
         User user = userService.findById(1);

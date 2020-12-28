@@ -22,8 +22,10 @@ import com.alibaba.fastjson.JSONObject;
 import com.google.common.base.Joiner;
 import com.rpc.core.demo.api.ProviderInfo;
 import com.rpc.core.demo.balance.LoadBalance;
+import com.rpc.core.demo.balance.loadbalance.ConsistentHashBalance;
 import com.rpc.core.demo.balance.loadbalance.WeightBalance;
 import com.rpc.core.demo.filter.FilterLine;
+import com.rpc.core.demo.proxy.RpcClient;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.CuratorCache;
@@ -91,6 +93,13 @@ public class DiscoveryClient extends ZookeeperClient {
 
         this.resourcesCache = CuratorCache.build(this.client, "/");
         watchResources();
+
+        if (RpcClient.getBalanceAlgorithmName().equals(WeightBalance.NAME)) {
+            this.balance = new WeightBalance();
+        }
+        else if (RpcClient.getBalanceAlgorithmName().equals(ConsistentHashBalance.NAME)) {
+            this.balance = new ConsistentHashBalance();
+        }
     }
 
     private void getAllProviders() throws Exception {
@@ -126,7 +135,8 @@ public class DiscoveryClient extends ZookeeperClient {
         System.out.println("======================= init : get all provider end\n\n");
     }
 
-    public String getProviders(String service, String group, String version, List<String> tags) throws Exception {
+    public String getProviders(String service, String group, String version, List<String> tags, String serviceName,
+                               String methodName) throws Exception {
         String provider = Joiner.on(":").join(service, group, version);
         if (!providersCache.containsKey(provider) || providersCache.get(provider).isEmpty()) {
             return null;
@@ -137,7 +147,7 @@ public class DiscoveryClient extends ZookeeperClient {
             return null;
         }
 
-        return balance.select(providers);
+        return balance.select(providers, serviceName, methodName);
     }
 
     private void watchResources() {
@@ -231,11 +241,5 @@ public class DiscoveryClient extends ZookeeperClient {
 
     public synchronized void close() {
         client.close();
-    }
-
-    public void setBalance(String balanceAlgorithm) {
-        if (WeightBalance.NAME.equals(balanceAlgorithm)) {
-            this.balance = new WeightBalance();
-        }
     }
 }

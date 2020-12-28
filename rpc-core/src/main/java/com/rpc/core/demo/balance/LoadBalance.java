@@ -26,5 +26,5 @@ import java.util.List;
  */
 public interface LoadBalance {
 
-    String select(List<ProviderInfo> providers);
+    String select(List<ProviderInfo> providers, String serviceName, String methodName);
 }

@@ -20,30 +20,28 @@ package com.rpc.core.demo.balance.loadbalance;
 import com.rpc.core.demo.api.ProviderInfo;
 
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * @author lw1243925457
  */
-public class WeightBalance extends AbstractLoadBalance {
+public class ConsistentHashBalance extends AbstractLoadBalance {
 
-    public static final String NAME = "weight_balance";
+    public static final String NAME = "consistent_hash_balance";
+
+    private final ConcurrentMap<String, ConsistentHashSelector> selectors = new ConcurrentHashMap<>();
 
     @Override
     public String select(List<ProviderInfo> providers, String serviceName, String methodName) {
-        int totalWeight = 0;
-        for (ProviderInfo provider: providers) {
-            totalWeight += provider.getWeight();
-        }
+        String key = serviceName + "." + methodName;
+        int providersHashCode = providers.hashCode();
 
-        int random = new Random().nextInt(totalWeight);
-        System.out.printf("provider amount: %s, random : %d\n", providers.size(), random);
-        for (ProviderInfo provider: providers) {
-            random -= provider.getWeight();
-            if (random <= 0) {
-                return provider.getUrl();
-            }
+        ConsistentHashSelector selector = selectors.get(key);
+        if (selector == null || selector.getIdentityHashCode() != providersHashCode) {
+            selectors.put(key, new ConsistentHashSelector(providers, methodName, providersHashCode));
+            selector = selectors.get(key);
         }
-        return providers.get(providers.size() - 1).getUrl();
+        return selector.select(key);
     }
 }

@@ -18,6 +18,7 @@
 package com.rpc.core.demo.proxy;
 
 import com.google.common.base.Joiner;
+import com.rpc.core.demo.balance.loadbalance.WeightBalance;
 import lombok.SneakyThrows;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.implementation.InvocationHandlerAdapter;
@@ -30,7 +31,17 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class RpcClient {
 
+    private static String balanceAlgorithmName = WeightBalance.NAME;
+
     private ConcurrentHashMap<String, Object> proxyCache = new ConcurrentHashMap<>();
+
+    public static void setBalanceAlgorithmName(String balanceAlgorithm) {
+        balanceAlgorithmName = balanceAlgorithm;
+    }
+
+    public static String getBalanceAlgorithmName() {
+        return balanceAlgorithmName;
+    }
 
     private Object getProxy(String className) {
         return proxyCache.get(className);
