@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package com.rpc.core.demo.filter;
+package com.rpc.core.demo.filter.client;
 
 import com.rpc.core.demo.api.ProviderInfo;
 
@@ -25,32 +25,27 @@ import java.util.List;
 /**
  * @author lw1243925457
  */
-public class FilterLine {
+public class TagFilter implements RpcFilter {
 
-    private static boolean isInit = false;
-    private static List<RpcFilter> rpcFilters = new ArrayList<>();
-
-    private static void init() {
-        addFilter(new TagFilter());
-    }
-
-    public static void addFilter(RpcFilter filter) {
-        rpcFilters.add(filter);
-    }
-
-    public static List<ProviderInfo> filter(List<ProviderInfo> providers, List<String> tags) {
-        if (!isInit) {
-            init();
-            isInit = true;
+    @Override
+    public List<ProviderInfo> filter(List<ProviderInfo> providers, List<String> tags) {
+        System.out.printf("\n%s tag filter start :: %s \n", tags.toString(), providers);
+        if (tags.isEmpty()) {
+            return providers;
         }
 
-        List<ProviderInfo> filterResult = new ArrayList<>(providers);
+        List<ProviderInfo> newProviders = new ArrayList<>(providers.size());
 
-        for (RpcFilter filter: rpcFilters) {
-            filterResult = filter.filter(filterResult, tags);
+        for (ProviderInfo provider: providers) {
+            for (String tag: tags) {
+                if (provider.getTags().contains(tag)) {
+                    newProviders.add(provider);
+                    break;
+                }
+            }
         }
 
-        System.out.printf("\n%s filter to %s\n", providers, filterResult);
-        return filterResult;
+        System.out.printf("\n 进行 Tag 简单路由转发: %s --> %s \n", providers.toString(), newProviders.toString());
+        return newProviders;
     }
 }

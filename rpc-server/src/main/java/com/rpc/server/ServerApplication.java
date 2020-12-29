@@ -17,6 +17,7 @@
 
 package com.rpc.server;
 
+import com.rpc.core.demo.filter.server.BackListFilter;
 import com.rpc.core.demo.netty.server.RpcNettyServer;
 import com.rpc.core.demo.proxy.ProviderServiceManagement;
 
@@ -26,6 +27,8 @@ import com.rpc.core.demo.proxy.ProviderServiceManagement;
 public class ServerApplication {
 
     public static void main(String[] args) throws Exception {
+        BackListFilter.addBackAddress("172.21.16.1");
+
         final int port = 8080;
         ProviderServiceManagement.init("com.rpc.server.demo.service.impl", port);
 

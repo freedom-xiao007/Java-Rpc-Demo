@@ -15,16 +15,22 @@
  * limitations under the License.
  */
 
-package com.rpc.core.demo.filter;
+package com.rpc.core.demo.filter.server;
 
-import com.rpc.core.demo.api.ProviderInfo;
-
-import java.util.List;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 /**
  * @author lw1243925457
  */
-public interface RpcFilter {
+public class BackListFilter {
 
-    List<ProviderInfo> filter(List<ProviderInfo> providers, List<String> tags);
+    private static ConcurrentSkipListSet backList = new ConcurrentSkipListSet();
+
+    public static void addBackAddress(String address) {
+        backList.add(address);
+    }
+
+    public static boolean checkAddress(String address) {
+        return backList.contains(address);
+    }
 }

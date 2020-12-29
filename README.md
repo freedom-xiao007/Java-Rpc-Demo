@@ -46,3 +46,4 @@
 ## 参考链接
 - [Curator 事件监听](https://www.cnblogs.com/crazymakercircle/p/10228385.html)
 - [一文聊透 Dubbo 元数据中心](https://cloud.tencent.com/developer/article/1532948)
+- [Netty中ctx.writeAndFlush与ctx.channel().writeAndFlush的区别](https://blog.csdn.net/FishSeeker/article/details/78447684)

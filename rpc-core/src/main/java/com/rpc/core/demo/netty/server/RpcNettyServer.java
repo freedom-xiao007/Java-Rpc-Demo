@@ -60,6 +60,7 @@ public class RpcNettyServer {
                     @Override
                     protected void initChannel(Channel channel) throws Exception {
                         ChannelPipeline pipeline = channel.pipeline();
+                        pipeline.addLast("Back List", new BackListFilterHandler());
                         pipeline.addLast("Message Encoder", new RpcEncoder());
                         pipeline.addLast("Message Decoder", new RpcDecoder());
                         pipeline.addLast("Message Handler", new RpcServerHandler());

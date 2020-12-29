@@ -24,7 +24,7 @@ import com.rpc.core.demo.api.ProviderInfo;
 import com.rpc.core.demo.balance.LoadBalance;
 import com.rpc.core.demo.balance.loadbalance.ConsistentHashBalance;
 import com.rpc.core.demo.balance.loadbalance.WeightBalance;
-import com.rpc.core.demo.filter.FilterLine;
+import com.rpc.core.demo.filter.client.FilterLine;
 import com.rpc.core.demo.proxy.RpcClient;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.curator.framework.recipes.cache.ChildData;
