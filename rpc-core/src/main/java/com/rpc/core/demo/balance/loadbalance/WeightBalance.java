@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Random;
 
 /**
+ * 加权负载均衡
+ *
  * @author lw1243925457
  */
 public class WeightBalance extends AbstractLoadBalance {

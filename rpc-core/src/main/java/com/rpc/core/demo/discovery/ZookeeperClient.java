@@ -24,6 +24,8 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 
 /**
+ * ZK客户端，用于连接ZK
+ *
  * @author lw1243925457
  */
 @Slf4j

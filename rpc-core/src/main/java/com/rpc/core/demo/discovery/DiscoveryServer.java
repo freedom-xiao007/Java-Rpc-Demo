@@ -30,6 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 服务发现服务器：用于注册Provider
+ *
  * @author lw1243925457
  */
 public class DiscoveryServer extends ZookeeperClient {
@@ -39,6 +41,16 @@ public class DiscoveryServer extends ZookeeperClient {
     public DiscoveryServer() {
     }
 
+    /**
+     * 生成Provider的相关信息，注册到ZK中
+     * @param service Service impl name
+     * @param group group
+     * @param version version
+     * @param port service listen port
+     * @param tags route tags
+     * @param weight load balance weight
+     * @throws Exception exception
+     */
     public void registerService(String service, String group, String version, int port, List<String> tags,
                                 int weight) throws Exception {
         ProviderInfo provider = new ProviderInfo(null, null, tags, weight);

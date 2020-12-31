@@ -23,22 +23,22 @@ import java.util.List;
 import java.util.TreeMap;
 
 /**
+ * 一致性哈希负载均衡器
+ *
  * @author lw1243925457
  */
 class ConsistentHashSelector {
 
-    private final int providersHashCode;
     private final TreeMap<Long, String> virtualInvokers;
     private final int identityHashCode;
-    private final int replicaNumber = 1024;
 
-    ConsistentHashSelector(List<ProviderInfo> providers, String methodName, int providersHashCode) {
-        this.providersHashCode = providersHashCode;
+    ConsistentHashSelector(List<ProviderInfo> providers, int providersHashCode) {
         this.virtualInvokers = new TreeMap<>();
         this.identityHashCode = providersHashCode;
 
         for (ProviderInfo provider: providers) {
             String address = provider.getUrl();
+            int replicaNumber = 1024;
             for (int i = 0; i < replicaNumber / 4; i++) {
                 byte[] digest = (address + i).getBytes();
                 for (int h = 0; h < 4; h++) {

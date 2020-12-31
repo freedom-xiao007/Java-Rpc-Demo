@@ -24,6 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
+ * 一致性哈希 负载均衡
+ *
  * @author lw1243925457
  */
 public class ConsistentHashBalance extends AbstractLoadBalance {
@@ -39,7 +41,7 @@ public class ConsistentHashBalance extends AbstractLoadBalance {
 
         ConsistentHashSelector selector = selectors.get(key);
         if (selector == null || selector.getIdentityHashCode() != providersHashCode) {
-            selectors.put(key, new ConsistentHashSelector(providers, methodName, providersHashCode));
+            selectors.put(key, new ConsistentHashSelector(providers, providersHashCode));
             selector = selectors.get(key);
         }
         return selector.select(key);

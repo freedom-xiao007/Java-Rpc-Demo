@@ -38,10 +38,19 @@ import java.util.*;
 public class ProviderServiceManagement {
 
     /**
-     * group -> version -> service class
+     * 通过服务名、分组、版本作为key，确实接口实现类的实例
+     * service:group:version --> class
      */
     private static Map<String, Object> proxyMap = new HashMap<>();
 
+    /**
+     * 初始化：通过扫描包路径，获取所有实现类，将其注册到ZK中
+     * 获取实现类上的Provider注解，获取服务名、分组、版本
+     * 调用ZK服务注册，将Provider注册到ZK中
+     * @param packageName 接口实现类的包路径
+     * @param port 服务监听的端口
+     * @throws Exception exception
+     */
     public static void init(String packageName, int port) throws Exception {
         System.out.println("\n-------- Loader Rpc Provider class start ----------------------\n");
 
@@ -68,6 +77,11 @@ public class ProviderServiceManagement {
         System.out.println("\n-------- Loader Rpc Provider class end ----------------------\n");
     }
 
+    /**
+     * 返回接口实现类的实例
+     * @param request request
+     * @return serviceimpl
+     */
     public static Object getProviderService(RpcRequest request) {
         String group = "default";
         String version= "default";

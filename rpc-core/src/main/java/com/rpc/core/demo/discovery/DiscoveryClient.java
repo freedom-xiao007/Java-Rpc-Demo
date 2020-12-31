@@ -38,6 +38,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
+ * 服务发现客户端
+ * 获取Provider列表
+ * 监听Provider更新
+ * 查找返回接口的Provider（先tag路由，后负载均衡）
+ *
  * @author lw1243925457
  */
 @Slf4j
@@ -63,7 +68,8 @@ public class DiscoveryClient extends ZookeeperClient {
     }
 
     /**
-     * group -> version -> provider cache -> provider instance
+     * Provider缓存列表
+     * server:group:version -> provider instance list
      */
     private Map<String, List<ProviderInfo>> providersCache = new HashMap<>();
 
@@ -73,7 +79,7 @@ public class DiscoveryClient extends ZookeeperClient {
 
     private LoadBalance balance = new WeightBalance();
 
-    public DiscoveryClient() {
+    private DiscoveryClient() {
         serviceDiscovery = ServiceDiscoveryBuilder.builder(ProviderInfo.class)
                 .client(client)
                 .basePath("/" + REGISTER_ROOT_PATH)
@@ -102,6 +108,10 @@ public class DiscoveryClient extends ZookeeperClient {
         }
     }
 
+    /**
+     * 从ZK中获取所有的Provider列表，保存下来
+     * @throws Exception exception
+     */
     private void getAllProviders() throws Exception {
         System.out.println("\n\n======================= init : get all provider");
 
@@ -135,8 +145,16 @@ public class DiscoveryClient extends ZookeeperClient {
         System.out.println("======================= init : get all provider end\n\n");
     }
 
-    public String getProviders(String service, String group, String version, List<String> tags, String serviceName,
-                               String methodName) throws Exception {
+    /**
+     * 根据传入的接口名称、分组、版本，返回讲过tag路由，负载均衡后的一个Provider服务器地址
+     * @param service service name
+     * @param group group
+     * @param version version
+     * @param tags tags
+     * @param methodName method name
+     * @return provider host ip
+     */
+    public String getProviders(String service, String group, String version, List<String> tags, String methodName) {
         String provider = Joiner.on(":").join(service, group, version);
         if (!providersCache.containsKey(provider) || providersCache.get(provider).isEmpty()) {
             return null;
@@ -147,21 +165,28 @@ public class DiscoveryClient extends ZookeeperClient {
             return null;
         }
 
-        return balance.select(providers, serviceName, methodName);
+        return balance.select(providers, service, methodName);
     }
 
+    /**
+     * 监听Provider的更新
+     */
     private void watchResources() {
         CuratorCacheListener listener = CuratorCacheListener.builder()
-                .forCreates(this::addProvider)
-                .forChanges(this::updateProvider)
-                .forDeletes(this::deleteProvider)
-                .forInitialized(() -> { log.info("Resources Cache initialized"); })
+                .forCreates(this::addHandler)
+                .forChanges(this::changeHandler)
+                .forDeletes(this::deleteHandler)
+                .forInitialized(() -> log.info("Resources Cache initialized"))
                 .build();
         resourcesCache.listenable().addListener(listener);
         resourcesCache.start();
     }
 
-    private void addProvider(ChildData node) {
+    /**
+     * 增加Provider
+     * @param node new provider
+     */
+    private void addHandler(ChildData node) {
         System.out.println("\n\n=================== add new provider ============================");
 
         System.out.printf("Node created: [%s:%s]%n", node.getPath(), new String(node.getData()));
@@ -169,23 +194,17 @@ public class DiscoveryClient extends ZookeeperClient {
             return;
         }
 
-        String jsonValue = new String(node.getData(), StandardCharsets.UTF_8);
-        JSONObject instance = (JSONObject) JSONObject.parse(jsonValue);
-        System.out.println(instance.toString());
-
-        String url = "http://" + instance.get("address") + ":" + instance.get("port");
-        ProviderInfo providerInfo = JSON.parseObject(instance.get("payload").toString(), ProviderInfo.class);
-        providerInfo.setId(instance.get("id").toString());
-        providerInfo.setUrl(url);
-
-        List<ProviderInfo> providerList = providersCache.getOrDefault(instance.get("name").toString(), new ArrayList<>());
-        providerList.add(providerInfo);
-        providersCache.put(instance.get("name").toString(), providerList);
+        updateProvider(node);
 
         System.out.println("=================== add new provider end ============================\n\n");
     }
 
-    private void updateProvider(ChildData oldNode, ChildData newNode) {
+    /**
+     * Provider更新
+     * @param oldNode old provider
+     * @param newNode updated provider
+     */
+    private void changeHandler(ChildData oldNode, ChildData newNode) {
         System.out.printf("Node changed, Old: [%s: %s] New: [%s: %s]%n", oldNode.getPath(),
                 new String(oldNode.getData()), newNode.getPath(), new String(newNode.getData()));
 
@@ -193,6 +212,14 @@ public class DiscoveryClient extends ZookeeperClient {
             return;
         }
 
+        updateProvider(newNode);
+    }
+
+    /**
+     * 增加或更新本地Provider
+     * @param newNode updated provider
+     */
+    private void updateProvider(ChildData newNode) {
         String jsonValue = new String(newNode.getData(), StandardCharsets.UTF_8);
         JSONObject instance = (JSONObject) JSONObject.parse(jsonValue);
         System.out.println(instance.toString());
@@ -207,7 +234,11 @@ public class DiscoveryClient extends ZookeeperClient {
         providersCache.put(instance.get("name").toString(), providerList);
     }
 
-    private void deleteProvider(ChildData oldNode) {
+    /**
+     * 删除Provider
+     * @param oldNode provider
+     */
+    private void deleteHandler(ChildData oldNode) {
         System.out.println("\n\n=================== delete provider ============================");
 
         System.out.printf("Node deleted, Old value: [%s: %s]%n", oldNode.getPath(), new String(oldNode.getData()));
