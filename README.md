@@ -9,7 +9,7 @@
 
 ## 实现过程中的文档记录
 - [RPC Demo(一) Netty RPC Demo 实现](https://github.com/lw1243925457/JAVA-000/blob/main/homework/rpc/rpc-demo/README.md)
-- [RPC Demo（二） 基于 Zookeeper 的服务发现](https://github.com/lw1243925457/Java-Rpc-Demo/doc/zkDiscovery.md)
+- [RPC Demo（二） 基于 Zookeeper 的服务发现](https://github.com/lw1243925457/Java-Rpc-Demo/blob/main/doc/zkDiscovery.md)
 
 ## 功能要求
 

@@ -19,6 +19,7 @@ package com.rpc.client.demo;
 
 import com.alibaba.fastjson.parser.ParserConfig;
 import com.rpc.core.demo.balance.loadbalance.ConsistentHashBalance;
+import com.rpc.core.demo.filter.client.Retry;
 import com.rpc.core.demo.proxy.RpcClient;
 import com.rpc.demo.model.Order;
 import com.rpc.demo.model.User;
@@ -40,6 +41,9 @@ public class ClientApplication {
         // fastjson auto setting
         ParserConfig.getGlobalInstance().addAccept("com.rpc.demo.model.Order");
         ParserConfig.getGlobalInstance().addAccept("com.rpc.demo.model.User");
+
+        // set retry time
+        Retry.setRetryLimit(3);
 
         RpcClient client = new RpcClient();
         RpcClient.setBalanceAlgorithmName(ConsistentHashBalance.NAME);

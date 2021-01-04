@@ -21,6 +21,7 @@ import com.alibaba.fastjson.JSON;
 import com.rpc.core.demo.api.RpcRequest;
 import com.rpc.core.demo.api.RpcResponse;
 import com.rpc.core.demo.discovery.DiscoveryClient;
+import com.rpc.core.demo.filter.client.Retry;
 import com.rpc.core.demo.netty.client.RpcNettyClientSync;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cglib.proxy.MethodInterceptor;
@@ -45,6 +46,7 @@ public class RpcInvocationHandler implements InvocationHandler, MethodIntercepto
     private final String version;
     private final DiscoveryClient discoveryClient = DiscoveryClient.getInstance();
     private final List<String> tags = new ArrayList<>();
+    private int retryTime = 0;
 
     <T> RpcInvocationHandler(Class<T> serviceClass) {
         this.serviceClass = serviceClass;
@@ -70,12 +72,36 @@ public class RpcInvocationHandler implements InvocationHandler, MethodIntercepto
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) {
-        return process(serviceClass, method, args);
+        try {
+            return process(serviceClass, method, args);
+        } catch (Exception e) {
+            if (retryTime < Retry.getRetryLimit()) {
+                log.info("send to rpc server exception, will retry");
+                retryTime += 1;
+                invoke(proxy, method, args);
+            } else {
+                log.info("retry limit, end");
+                retryTime = 0;
+            }
+        }
+        return null;
     }
 
     @Override
     public Object intercept(Object o, Method method, Object[] args, MethodProxy methodProxy) {
-        return process(serviceClass, method, args);
+        try {
+            return process(serviceClass, method, args);
+        } catch (Exception e) {
+            if (retryTime < Retry.getRetryLimit()) {
+                log.info("send to rpc server exception, will retry");
+                retryTime += 1;
+                intercept(o, method, args, methodProxy);
+            } else {
+                log.info("retry limit, end");
+                retryTime = 0;
+            }
+        }
+        return null;
     }
 
     /**
